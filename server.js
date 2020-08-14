@@ -29,4 +29,4 @@ app.use(routes)
 
 // Start server
 const PORT = process.env._NODE_PORT || 3000
-app.listen(PORT, console.log(`Server running in ${process.env._NODE_ENV} mode on port ${PORT}`))
+server = app.listen(PORT, console.log(`Server running in ${process.env._NODE_ENV} mode on port ${PORT}`))
