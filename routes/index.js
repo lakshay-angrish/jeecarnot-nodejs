@@ -2,9 +2,10 @@ const { render }          = require('ejs')
 const router              = require('express').Router()
 const msg91OTP            = require('msg91-lib').msg91OTP ;
 const msg91otp            = new msg91OTP({
-    authKey='xx',
-    templateId='xx'
+    authKey: "338499A89m6vbGDkHw5f37897eP1",
+    templateId: "5f379520d6fc0554d25f1b63"
 })
+var http                  = require('https')
 var passport              = require("passport")
 var localStrategy         = require('passport-local')
 var localMongooseStrategy = require('passport-local-mongoose')
@@ -37,7 +38,7 @@ router.get((req, res) => {
 
 
 
-router.post('/mentee/register/otp', (req, res) => {
+router.post('/mentee/register/otp',async function(req, res) {
     const response = await msg91otp.send('+91'+req.body.phone)
     if (response.type=='success') {
         res.json({
@@ -52,30 +53,37 @@ router.post('/mentee/register/otp', (req, res) => {
 })
 
 
-router.post('/mentee/register/verify', (req, res) => {
-    const response= await msg91otp.verify('+91'+req.body.phone)
-    if (response.type=='success') {
-        Mentee.register(new Mentee({
-            name: req.body.name,
-            username: req.body.email,
-            phone: req.body.phone,
-        }),
-        req.body.password, function(err, newMentee) {
-            if (err) {
-                res.redirect('/register')
-            } else {
-                res.redirect('/mentee/'+newMentee._id+'/profile-complete')
-            }
-        })
-    } else {
-        res.json({
-            message:'failure'
-        })
-    }
+router.post('/mentee/register/verify', async (req, res) => {
+    
+    try {
+        const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
+        if (response.type=='success') {
+            Mentee.register(new Mentee({
+                name: req.body.name,
+                username: req.body.email,
+                phone: req.body.phone,
+            }),
+            req.body.password, function(err, newMentee) {
+                if (err) {
+                    res.redirect('/register')
+                } else {
+                    res.redirect('/mentee/'+newMentee._id+'/profile-complete')
+                }
+            })
+        } else {
+            res.json({
+                message:'failure'
+            })
+        }
+      } catch (error) {
+        console.log(error.toJson());
+        res.redirect('/mentee/register')
+      }
+    
 })
 
 
-router.post('/mentee/register/resend', (req, res)=> {
+router.post('/mentee/register/resend',async (req, res)=> {
     const response = await msg91otp.retry("+91"+req.phone);
     if (response.message=='success') {
         res.json({
@@ -105,7 +113,7 @@ router.get('/mentee/login', (req, res)=> {
     if (req.isAuthenticated) {
         res.redirect('/mentee/'+req.user._id+'/home') // this is the home page unique to each student
     } else {
-        res.render('login') // this is the login page
+        res.send('login') // this is the login page
     }
 })
 

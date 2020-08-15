@@ -1,0 +1,14 @@
+::1 - - [15/Aug/2020:08:07:10 +0000] "GET / HTTP/1.1" 200 41
+::1 - - [15/Aug/2020:08:07:10 +0000] "GET /favicon.ico HTTP/1.1" 404 150
+::1 - - [15/Aug/2020:08:07:52 +0000] "OPTIONS / HTTP/1.1" 200 8
+::1 - - [15/Aug/2020:08:09:41 +0000] "OPTIONS / HTTP/1.1" 200 8
+::1 - - [15/Aug/2020:08:10:07 +0000] "GET / HTTP/1.1" 200 41
+::1 - - [15/Aug/2020:08:34:10 +0000] "GET /mentee/register HTTP/1.1" 200 33
+::1 - - [15/Aug/2020:08:38:47 +0000] "POST /mentee/register/otp HTTP/1.1" 200 21
+::1 - - [15/Aug/2020:08:46:09 +0000] "POST /mentee/register/otp HTTP/1.1" 200 21
+::1 - - [15/Aug/2020:08:46:37 +0000] "POST /mentee/register/otp HTTP/1.1" 200 21
+::1 - - [15/Aug/2020:08:50:19 +0000] "POST /mentee/register/otp HTTP/1.1" 200 21
+::1 - - [15/Aug/2020:08:50:33 +0000] "POST /mentee/register/verify HTTP/1.1" 302 31
+::1 - - [15/Aug/2020:08:50:33 +0000] "GET /register HTTP/1.1" 404 147
+::1 - - [15/Aug/2020:08:55:49 +0000] "POST /mentee/register/verify HTTP/1.1" 302 38
+::1 - - [15/Aug/2020:08:55:49 +0000] "GET /mentee/register HTTP/1.1" 200 33
