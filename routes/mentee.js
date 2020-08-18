@@ -10,7 +10,8 @@ var passport              = require("passport")
 var localStrategy         = require('passport-local')
 var localMongooseStrategy = require('passport-local-mongoose')
 var Mentee                = require('../models/mentee') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
-var mongoose              = require('mongoose')
+var mongoose              = require('mongoose');
+const { assert } = require('console');
 var mongoDB               = "mongodb://localhost:27017/carnot"
 mongoose.connect(mongoDB, {useUnifiedTopology:true ,useNewUrlParser: true})
 var db                    = mongoose.connection
@@ -28,49 +29,62 @@ passport.deserializeUser(Mentee.deserializeUser())
 
 
 router.post('/mentee/register/otp',async function(req, res) {
-    number = req.body.phone
-    console.log(number)
-    console.log(req)
-    const response = await msg91otp.send('+91'+number)
-    if (response.type=='success') {
-        res.json({
-            message: 'success',
-        })
-    } else {
-        res.json({
-            message:'failure'
-        })
-    }
-    console.log(response)  
-})
-
-
-router.post('/mentee/register/verify', async (req, res) => {
-    
-    try {
-        const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
+    if (typeof(req.body.name)!='undefined'
+    && typeof(req.body.username)!='undefined'
+    && typeof(req.body.password)!='undefined'
+    && typeof(req.body.phone)!='undefined') {
+        number = req.body.phone
+        console.log(number)
+        console.log(req)
+        const response = await msg91otp.send('+91'+number)
+        console.log(response)  
         if (response.type=='success') {
-            Mentee.register(new Mentee({
-                name: req.body.name,
-                username: req.body.email,
-                phone: req.body.phone,
-            }),
-            req.body.password, function(err, newMentee) {
-                if (err) {
-                    res.redirect('/mentee/register')
-                } else {
-                    res.redirect('/mentee/'+newMentee._id+'/profile-complete')
-                }
+            res.json({
+                message: 'success',
             })
         } else {
             res.json({
                 message:'failure'
             })
         }
-      } catch (error) {
-        console.log(error.toJson());
+    } else {
+        res.send('form incomplete')
+    }
+})
+
+
+router.post('/mentee/register/verify', async (req, res) => {
+    if (typeof(req.body.name)!='undefined'
+    && typeof(req.body.username)!='undefined'
+    && typeof(req.body.password)!='undefined'
+    && typeof(req.body.phone)!='undefined') {
+        try {
+            const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
+            if (response.type=='success') {
+                Mentee.register(new Mentee({
+                    name: req.body.name,
+                    username: req.body.email,
+                    phone: req.body.phone,
+                }),  
+                req.body.password, function(err, newMentee) {
+                    if (err) {
+                        res.redirect('/mentee/register')
+                    } else {
+                        res.redirect('/mentee/'+newMentee._id+'/profile-complete')
+                    }
+                })
+            } else {
+                res.json({
+                    message:'failure'
+                })
+            }
+        } catch (error) {
+            console.log(error.toJson());
+            res.redirect('/mentee/register')
+        }
+    } else {
         res.redirect('/mentee/register')
-      }
+    }
     
 })
 
