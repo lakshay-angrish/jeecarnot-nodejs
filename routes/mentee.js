@@ -6,13 +6,14 @@ const msg91otp            = new msg91OTP({
     authKey: "338499A89m6vbGDkHw5f37897eP1",
     templateId: "5f379520d6fc0554d25f1b63"
 })
+var flash                 = require('connect-flash')
 var http                  = require('https')
 var passport              = require("passport")
 var localStrategy         = require('passport-local')
 var localMongooseStrategy = require('passport-local-mongoose')
 var Mentee                = require('../models/mentee') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
 var mongoose              = require('mongoose');
-const { assert } = require('console');
+const { assert }          = require('console');
 var mongoDB               = "mongodb://localhost:27017/carnot"
 mongoose.connect(mongoDB, {useUnifiedTopology:true ,useNewUrlParser: true})
 var db                    = mongoose.connection
@@ -34,8 +35,10 @@ passport.deserializeUser(Mentee.deserializeUser(function(id, done) {
         done(err, user)
     })
 }))
+router.use(flash())
 
-var _id=null;
+
+var _id=null;  // this will store current id after login or signup for the session. 
 console.log(_id)
 router.post('/mentee/register/otp',async function(req, res) {
     if (typeof(req.body.name)!='undefined'
@@ -83,7 +86,8 @@ router.post('/mentee/register/verify', async (req, res) => {
                         console.log(newMentee)
                         console.log('redirecting to: '+'/mentee/'+newMentee._id.toString()+'/profile-complete')
                         _id = newMentee._id.toString()
-                        res.redirect('/mentee/'+newMentee._id.toString()+'/profile-complete')
+                        req.flash('id', newMentee._id.toString())
+                        res.redirect('/mentee/profile-complete')
                     }
                 })
             } else {
@@ -119,7 +123,7 @@ router.post('/mentee/register/resend',async (req, res)=> {
     }
 })
  // throughout the code i will be treating email as the username for simplicity purposes
-router.get('/mentee/:id/profile-complete', authentication, IDcheck, (req, res)=> {
+router.get('/mentee/profile-complete', authentication, (req, res)=> {
         res.send('ask more details') // this is where the page asking to complete profile comes. req has user details which can be used preload parts of form.
     
 })
@@ -128,19 +132,22 @@ router.get('/mentee/register', (req, res) =>{
     res.send('this is mentee registeration page') // this is where mentee mentee do registeration and phone verification
 })
 
-router.get('/mentee/login',IDcheck, (req, res)=> {
+router.get('/mentee/login', (req, res)=> {
         
         res.send('login') // this is the login page
     
 })
 
-router.put('/mentee/:id/profile-complete',authentication, IDcheck, (req, res) => {
+router.put('/mentee/profile-complete',authentication, (req, res) => {
+    var tmp_id = req.flash('id')[0]
     req.body.info.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
-    Mentee.findByIdAndUpdate(req.params.id, req.body.info, (err, updated)=> {
+    Mentee.findByIdAndUpdate(tmp_id, req.body.info, (err, updated)=> {
         if (err) {
-            res.redirect('/mentee/'+req.params.id+'/profile-complete')
+            req.flash('id', tmp_id)
+            res.redirect('/mentee/profile-complete')
         } else {
-            res.redirect('/mentee/:id/payments')
+            req.flash('id', tmp_id)
+            res.redirect('/mentee/payments')
         }
     })
 })
@@ -148,13 +155,16 @@ router.put('/mentee/:id/profile-complete',authentication, IDcheck, (req, res) =>
 router.post('/mentee/login', passport.authenticate('local', {failureRedirect: '/mentee/login'}), (req, res) => {
     if (typeof(req.user) !='undefined') {
         _id = req.user._id.toString()
-        res.redirect('/mentee/'+req.user._id.toString()+'/home')
+        req.flash('id', req.user._id.toString())
+        res.redirect('/mentee/home')
     } 
         
 })
 
-router.get('/mentee/:id/home', authentication, IDcheck, (req, res)=> {
-    res.send('student home with id: '+req.params.id)
+router.get('/mentee/home', authentication, (req, res)=> {
+
+    var tmp_id = req.flash('id')[0]
+    res.send('student home with id: '+tmp_id)
 })
 
 // I had the option to use passport.authenticate however using that would automatically create user object in the next request which would limit use of the function
@@ -166,19 +176,6 @@ function authentication(req, res, next) {
         res.redirect('/mentee/login')
     }
 }
-// IDcheck must be used after authentication when accessing user's sensitive info
-function IDcheck(req, res, next) {
-    console.log('_id is : '+_id)
-    console.log('paramID is : '+req.params.id)
-    if (_id !=null) {
-        if (req.params.id==_id) {
-            next()
-        } else {
-            res.redirect('/mentee/'+_id+'/home')
-        }
-    } else {
-        next()
-    }
-}
+
 
 module.exports = router
