@@ -7,3 +7,4 @@ test.http
 logs/access.log
 
 public/test/*
+.env
