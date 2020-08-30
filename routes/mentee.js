@@ -1,6 +1,7 @@
+require('dotenv').config()
+console.log(process.env)
 const { render }          = require('ejs')
 const express             = require('express')
-require('dotenv').config()
 const router              = require('express').Router()
 var mongoose              = require("mongoose")
 var bodyparser            = require("body-parser")
