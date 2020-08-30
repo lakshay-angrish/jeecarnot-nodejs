@@ -5,3 +5,5 @@ routes/.env
 test.http
 
 logs/access.log
+
+public/test/*
