@@ -1,20 +1,35 @@
 const { render }          = require('ejs')
 const express             = require('express')
 const router              = require('express').Router()
+var mongoose              = require("mongoose")
+var bodyparser            = require("body-parser")
 const msg91OTP            = require('msg91-lib').msg91OTP ;
 const msg91otp            = new msg91OTP({
-    authKey: "338499A89m6vbGDkHw5f37897eP1",
-    templateId: "5f379520d6fc0554d25f1b63"
-})
+                                authKey: "338499A89m6vbGDkHw5f37897eP1",
+                                templateId: "5f379520d6fc0554d25f1b63"
+                            })
+const mailgun             = require("mailgun-js");
+const DOMAIN              = 'jeecarnot.com';
+const mg                  = mailgun({
+                                apiKey: 'a0af3ae7766eca6494eb4916c9a681b6-f7d0b107-2e03b057',
+                                domain: DOMAIN
+                            });
+var senderEmail           = 'JEECarnot <no-reply-test@carnot-test.com>'
+var request               = require('request')
 var flash                 = require('connect-flash')
 var http                  = require('https')
 var passport              = require("passport")
 var localStrategy         = require('passport-local')
 var localMongooseStrategy = require('passport-local-mongoose')
-var Mentee                = require('../models/mentee') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
+var Mentee                = require('../models/menteeModel') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
+var verificationSchema    = mongoose.Schema({
+                                user: String
+                            })
+var Verification          = mongoose.model('Verification', verificationSchema)
 var mongoose              = require('mongoose');
 const { assert }          = require('console');
 var mongoDB               = "mongodb://localhost:27017/carnot"
+router.use(bodyparser.urlencoded({extended: true}))
 mongoose.connect(mongoDB, {useUnifiedTopology:true ,useNewUrlParser: true})
 var db                    = mongoose.connection
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
@@ -39,16 +54,13 @@ router.use(flash())
 
 
 var _id=null;  // this will store current id after login or signup for the session. 
-console.log(_id)
 router.post('/mentee/register/otp',async function(req, res) {
     if (typeof(req.body.name)!='undefined'
     && typeof(req.body.email)!='undefined'
     && typeof(req.body.password)!='undefined'
     && typeof(req.body.phone)!='undefined') {
         number = req.body.phone
-        console.log(number)
-        const response = await msg91otp.send('+91'+number)
-        console.log(response)  
+        const response = await msg91otp.send('+91'+number)  
         if (response.type=='success') {
             res.json({
                 message: 'success',
@@ -133,7 +145,6 @@ router.get('/mentee/register', (req, res) =>{
 })
 
 router.get('/mentee/login', (req, res)=> {
-        
         res.send('login') // this is the login page
     
 })
@@ -156,7 +167,7 @@ router.post('/mentee/login', passport.authenticate('local', {failureRedirect: '/
     if (typeof(req.user) !='undefined') {
         _id = req.user._id.toString()
         req.flash('id', req.user._id.toString())
-        res.redirect('/mentee/home')
+        res.redirect('/mentee/email-verification')
     } 
         
 })
@@ -165,6 +176,67 @@ router.get('/mentee/home', authentication, (req, res)=> {
 
     var tmp_id = req.flash('id')[0]
     res.send('student home with id: '+tmp_id)
+})
+
+router.get('/mentee/email-verification', authentication, (req, res) => {
+
+    var email = req.user.username
+    Verification.findOneAndDelete({user: _id})
+    if (_id!=null) {
+        
+        Verification.create({
+            user: _id
+        }, (err, newVerify) => {
+            if (err) {
+                console.log('recieved an error :(')
+                console.log(err)
+                res.send('recieved an error on our end')
+            } else {
+                console.log('verify created :)')
+                console.log(newVerify)
+                var link = 'localhost:3333/mentee/email/'+newVerify._id.toString()
+                var data = {
+                    from: senderEmail,
+                    to: email,
+                    subject:  'Verify your Email',
+                    html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href='+link+'>Verify Your Email</a>'
+                }
+                mg.messages().send(data, function (error, body) {
+                    if (error) {
+                        res.send('sorry we encountered an error')
+                    } else {
+                        console.log(body);
+                    }
+                    
+                });
+            }
+        })
+    } else {
+        console.log(' _id is null :( ')
+        res.send('encountered unexpected problem')
+    }
+    
+    
+    res.send('we have sent an email to '+email+' for verification. pls check inbox')
+    
+})
+
+router.get('/mentee/email/:ver', (req, res) => {
+    Verification.findByIdAndDelete(req.params.ver, (err, found) => {
+        if (err) {
+            res.send('sorry try again')
+        } else {
+            console.log(found.user)
+            var info = found.user
+            Mentee.findByIdAndUpdate(info, {emailVerification: true}, (error, updated) => {
+                if (error) {
+                    res.send('sorry we encountered a problem')
+                } else {
+                    res.send('Email Verified :)')
+                }
+            })
+        }
+    })
 })
 
 // I had the option to use passport.authenticate however using that would automatically create user object in the next request which would limit use of the function

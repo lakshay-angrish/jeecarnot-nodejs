@@ -6,6 +6,7 @@ var MenteeSchema = mongoose.Schema({
     password: String,
     username: String,
     phone: String,
+    emailVerification: {type: Boolean, default: false},
     alternatephone: {type: String, default:''},
     parentname: {type: String, default:''},
     parentPhone: {type: String, default:''},
