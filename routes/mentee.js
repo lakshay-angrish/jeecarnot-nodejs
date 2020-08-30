@@ -1,17 +1,18 @@
 const { render }          = require('ejs')
 const express             = require('express')
+require('dotenv').config()
 const router              = require('express').Router()
 var mongoose              = require("mongoose")
 var bodyparser            = require("body-parser")
 const msg91OTP            = require('msg91-lib').msg91OTP ;
 const msg91otp            = new msg91OTP({
-                                authKey: "338499A89m6vbGDkHw5f37897eP1",
-                                templateId: "5f379520d6fc0554d25f1b63"
+                                authKey: process.env.MSG91_AUTH,
+                                templateId: process.env.MSG91_TEMPLATE
                             })
 const mailgun             = require("mailgun-js");
 const DOMAIN              = 'jeecarnot.com';
 const mg                  = mailgun({
-                                apiKey: 'a0af3ae7766eca6494eb4916c9a681b6-f7d0b107-2e03b057',
+                                apiKey: process.env.MAILGUN_API,
                                 domain: DOMAIN
                             });
 var senderEmail           = 'JEECarnot <no-reply-test@carnot-test.com>'
@@ -183,7 +184,7 @@ router.get('/mentee/email-verification', authentication, (req, res) => {
     var email = req.user.username
     Verification.findOneAndDelete({user: _id})
     if (_id!=null) {
-        
+
         Verification.create({
             user: _id
         }, (err, newVerify) => {
