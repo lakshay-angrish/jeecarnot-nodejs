@@ -1,15 +1,17 @@
 require('dotenv').config()
-console.log(process.env)
+//console.log(process.env) // only to verify
 const { render }          = require('ejs')
 const express             = require('express')
 const router              = require('express').Router()
 var mongoose              = require("mongoose")
 var bodyparser            = require("body-parser")
 const msg91OTP            = require('msg91-lib').msg91OTP ;
+const jwt                 = require('jsonwebtoken');
 const msg91otp            = new msg91OTP({
                                 authKey: process.env.MSG91_AUTH,
                                 templateId: process.env.MSG91_TEMPLATE
                             })
+const secret              = process.env.secret_json
 const mailgun             = require("mailgun-js");
 const DOMAIN              = 'jeecarnot.com';
 const mg                  = mailgun({
@@ -83,10 +85,10 @@ router.post('/mentee/register/verify', async (req, res) => {
     && typeof(req.body.password)!='undefined'
     && typeof(req.body.phone)!='undefined') {
         try {
-            const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
+            //const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
             
             if (response.type=='success') {
-        //  if (true) {
+         // if (true) {
                 Mentee.register(new Mentee({
                     name: req.body.name,
                     username: req.body.email,
@@ -101,6 +103,36 @@ router.post('/mentee/register/verify', async (req, res) => {
                         console.log('redirecting to: '+'/mentee/'+newMentee._id.toString()+'/profile-complete')
                         _id = newMentee._id.toString()
                         req.flash('id', newMentee._id.toString())
+                        var user = {
+                            email: newMentee.username,
+                            id: newMentee._id
+                        }
+                        console.log('now entering jwt loop')
+                        jwt.sign({user}, secret, {expiresIn: '24h'}, (err, token) => {
+                            console.log('entered jwt loop')
+                            if (err) {
+                                console.log('encountered error')
+                                console.log(err)
+                            }
+                            else {
+                                console.log('no error 1')
+                                var link = 'localhost:3333/mentee/email/'+token.toString()
+                                var emailData = {
+                                    from: senderEmail,
+                                    to: user.email,
+                                    subject:  'Verify your Email',
+                                    html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href='+link+'>Verify Your Email</a>'
+                                }
+                                mg.messages().send(emailData, function (error, body) {
+                                    if (error) {
+                                        console.log(error)
+                                    } else {
+                                        console.log(body)
+                                    } 
+                                });
+                            }
+                        })
+
                         res.redirect('/mentee/profile-complete')
                     }
                 })
@@ -180,62 +212,18 @@ router.get('/mentee/home', authentication, (req, res)=> {
     res.send('student home with id: '+tmp_id)
 })
 
-router.get('/mentee/email-verification', authentication, (req, res) => {
-
-    var email = req.user.username
-    Verification.findOneAndDelete({user: _id})
-    if (_id!=null) {
-
-        Verification.create({
-            user: _id
-        }, (err, newVerify) => {
-            if (err) {
-                console.log('recieved an error :(')
-                console.log(err)
-                res.send('recieved an error on our end')
-            } else {
-                console.log('verify created :)')
-                console.log(newVerify)
-                var link = 'localhost:3333/mentee/email/'+newVerify._id.toString()
-                var data = {
-                    from: senderEmail,
-                    to: email,
-                    subject:  'Verify your Email',
-                    html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href='+link+'>Verify Your Email</a>'
-                }
-                mg.messages().send(data, function (error, body) {
-                    if (error) {
-                        res.send('sorry we encountered an error')
-                    } else {
-                        console.log(body);
-                    }
-                    
-                });
-            }
-        })
-    } else {
-        console.log(' _id is null :( ')
-        res.send('encountered unexpected problem')
-    }
-    
-    
-    res.send('we have sent an email to '+email+' for verification. pls check inbox')
-    
-})
-
 router.get('/mentee/email/:ver', (req, res) => {
-    Verification.findByIdAndDelete(req.params.ver, (err, found) => {
+    jwt.verify(req.params.ver, secret, (err, authData) => {
         if (err) {
-            res.send('sorry try again')
+            res.send("Unable to verify try again")
         } else {
-            console.log(found.user)
-            var info = found.user
-            Mentee.findByIdAndUpdate(info, {emailVerification: true}, (error, updated) => {
-                if (error) {
-                    res.send('sorry we encountered a problem')
+            Mentee.findByIdAndUpdate(authData.user.id, {emailVerification: true}, (err, updated) => {
+                if (err) {
+                    res.send("Unable to verify try again")
                 } else {
-                    res.send('Email Verified :)')
+                    res.send('verified email thank you')
                 }
+
             })
         }
     })
@@ -243,13 +231,40 @@ router.get('/mentee/email/:ver', (req, res) => {
 
 // I had the option to use passport.authenticate however using that would automatically create user object in the next request which would limit use of the function
 function authentication(req, res, next) {
-    console.log('status of authentication is '+req.isAuthenticated)
+    //console.log('status of authentication is '+req.isAuthenticated)
     if (req.isAuthenticated) {
         return next()
     } else {
         res.redirect('/mentee/login')
     }
 }
-
-
+// when actually implementing on website remember to change local host to website name
+function emailVerification(data) {
+    var user = {
+        email: data.username,
+        id: data._id
+    }
+    jwt.sign({user}, secret, {expiresIn: '24h'}, (err, token) => {
+        if (err) {
+            console.log(err)
+            return -1
+        }
+        var link = 'localhost:3333/mentee/email/'+token.toString()
+        var emailData = {
+            from: senderEmail,
+            to: email,
+            subject:  'Verify your Email',
+            html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href='+link+'>Verify Your Email</a>'
+        }
+        mg.messages().send(emailData, function (error, body) {
+            if (error) {
+                console.log(error)
+                return -2
+            } else {
+                console.log(body);
+                return 1
+            } 
+        });
+    })
+}
 module.exports = router
