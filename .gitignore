@@ -8,3 +8,4 @@ logs/access.log
 
 public/test/*
 .env
+.env

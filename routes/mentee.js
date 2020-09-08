@@ -27,10 +27,6 @@ var passport              = require("passport")
 var localStrategy         = require('passport-local')
 var localMongooseStrategy = require('passport-local-mongoose')
 var Mentee                = require('../models/menteeModel') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
-var verificationSchema    = mongoose.Schema({
-                                user: String
-                            })
-var Verification          = mongoose.model('Verification', verificationSchema)
 var mongoose              = require('mongoose');
 const { assert }          = require('console');
 var mongoDB               = "mongodb://localhost:27017/carnot"
@@ -59,12 +55,13 @@ router.use(flash())
 
 
 var _id=null;  // this will store current id after login or signup for the session. 
-router.post('/mentee/register/otp',async function(req, res) {
+router.post('/mentee/register',async function(req, res) {
     if (typeof(req.body.name)!='undefined'
     && typeof(req.body.email)!='undefined'
     && typeof(req.body.password)!='undefined'
     && typeof(req.body.phone)!='undefined') {
-        number = req.body.phone
+        try {
+            number = req.body.phone
         const response = await msg91otp.send('+91'+number)  
         if (response.type=='success') {
             res.json({
@@ -75,8 +72,17 @@ router.post('/mentee/register/otp',async function(req, res) {
                 message:'failure'
             })
         }
+        } catch (err) {
+            console.log("error in try");
+            res.json({
+                message: "error in TRY"
+            })
+        }
+        
     } else {
-        res.send('form incomplete')
+        res.json({
+            message: 'incomplete form'
+        })
     }
 })
 
@@ -86,7 +92,7 @@ router.post('/mentee/register/verify', async (req, res) => {
     && typeof(req.body.password)!='undefined'
     && typeof(req.body.phone)!='undefined') {
         try {
-            //const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
+            const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
             
             if (response.type=='success') {
          // if (true) {
@@ -147,7 +153,10 @@ router.post('/mentee/register/verify', async (req, res) => {
             res.redirect('/mentee/register')
         }
     } else {
-        res.redirect('/mentee/register')
+        console.log("form incomplete")
+        res.json({
+            message: 'incomplete form'
+        })
     }
     
 })
@@ -157,16 +166,22 @@ router.post('/mentee/register/resend',async (req, res)=> {
     && typeof(req.body.email)!='undefined'
     && typeof(req.body.password)!='undefined'
     && typeof(req.body.phone)!='undefined') {
-        const response = await msg91otp.retry("+91"+req.phone);
-        if (response.message=='success') {
+        try {
+            const response = await msg91otp.retry("+91"+req.body.phone);
+        res.json({
+            message: response.message
+        })
+        } catch (error) {
+            console.log(error);
             res.json({
-                message: 'success'
-            })
-        } else {
-            res.json({
-                message: 'error'
+                message:'error in TRY'
             })
         }
+        
+    } else {
+        res.json({
+            message: 'incomplete form'
+        })
     }
 })
  // throughout the code i will be treating email as the username for simplicity purposes
@@ -176,11 +191,13 @@ router.get('/mentee/profile-complete', authentication, (req, res)=> {
 })
 
 router.get('/mentee/register', (req, res) =>{
-    res.send('this is mentee registeration page') // this is where mentee mentee do registeration and phone verification
+    res.render("register")
+    //res.send('this is mentee registeration page') // this is where mentee mentee do registeration and phone verification
 })
 
 router.get('/mentee/login', (req, res)=> {
-        res.send('login') // this is the login page
+    res.render('login')
+        //res.send('login') // this is the login page
     
 })
 
@@ -201,8 +218,12 @@ router.put('/mentee/profile-complete',authentication, (req, res) => {
 router.post('/mentee/login', passport.authenticate('local', {failureRedirect: '/mentee/login'}), (req, res) => {
     if (typeof(req.user) !='undefined') {
         _id = req.user._id.toString()
+        console.log("successful login")
         req.flash('id', req.user._id.toString())
-        res.redirect('/mentee/email-verification')
+        res.redirect('/mentee/home')
+    } else {
+        console.log('req user is undefined')
+        res.redirect('/mentee/login')
     } 
         
 })
