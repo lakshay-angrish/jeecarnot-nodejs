@@ -21,7 +21,6 @@ const mg                  = mailgun({
                             });
 var senderEmail           = 'JEECarnot <no-reply-test@carnot-test.com>'
 var request               = require('request')
-var flash                 = require('connect-flash')
 var http                  = require('https')
 var passport              = require("passport")
 var localStrategy         = require('passport-local')
@@ -36,7 +35,7 @@ var db                    = mongoose.connection
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 router.use(express.static('public'))
 router.use(require("express-session")({
-    secret: "secret handler",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false
 }))
@@ -53,16 +52,14 @@ passport.deserializeUser(Mentee.deserializeUser(function(id, done) {
 }))
 router.use(flash())
 
-
-var _id=null;  // this will store current id after login or signup for the session. 
 router.post('/mentee/register',async function(req, res) {
     if (typeof(req.body.name)!='undefined'
     && typeof(req.body.email)!='undefined'
     && typeof(req.body.password)!='undefined'
     && typeof(req.body.phone)!='undefined') {
         try {
-            number = req.body.phone
-        const response = await msg91otp.send('+91'+number)  
+        number = req.body.phone
+        const response = await msg91otp.send('+91'+number, {otp_expiry: 10})  
         if (response.type=='success') {
             res.json({
                 message: 'success',
@@ -86,7 +83,7 @@ router.post('/mentee/register',async function(req, res) {
     }
 })
 
-router.post('/mentee/register/verify', async (req, res) => {
+router.post('/mentee/register/verify', async (req, res, next) => {
     if (typeof(req.body.name)!='undefined'
     && typeof(req.body.email)!='undefined'
     && typeof(req.body.password)!='undefined'
@@ -95,7 +92,7 @@ router.post('/mentee/register/verify', async (req, res) => {
             const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
             
             if (response.type=='success') {
-         // if (true) {
+          //if (true) {
                 Mentee.register(new Mentee({
                     name: req.body.name,
                     username: req.body.email,
@@ -108,8 +105,6 @@ router.post('/mentee/register/verify', async (req, res) => {
                     } else {
                         console.log(newMentee)
                         console.log('redirecting to: '+'/mentee/'+newMentee._id.toString()+'/profile-complete')
-                        _id = newMentee._id.toString()
-                        req.flash('id', newMentee._id.toString())
                         var user = {
                             email: newMentee.username,
                             id: newMentee._id
@@ -139,7 +134,13 @@ router.post('/mentee/register/verify', async (req, res) => {
                                 });
                             }
                         })
-
+                        console.log("user is --")
+                        console.log(req.user)
+                        req.logIn(newMentee, (erri)=> {
+                            if (erri) {
+                                console.log(erri)
+                            }
+                        })
                         res.redirect('/mentee/profile-complete')
                     }
                 })
@@ -186,30 +187,30 @@ router.post('/mentee/register/resend',async (req, res)=> {
 })
  // throughout the code i will be treating email as the username for simplicity purposes
 router.get('/mentee/profile-complete', authentication, (req, res)=> {
-        res.send('ask more details') // this is where the page asking to complete profile comes. req has user details which can be used preload parts of form.
-    
+    res.send('ask more details') // this is where the page asking to complete profile comes. req has user details which can be used preload parts of form.
 })
 
 router.get('/mentee/register', (req, res) =>{
-    res.render("register")
-    //res.send('this is mentee registeration page') // this is where mentee mentee do registeration and phone verification
+    res.render("register") // this is where mentee mentee do registeration and phone verification
 })
 
-router.get('/mentee/login', (req, res)=> {
-    res.render('login')
-        //res.send('login') // this is the login page
-    
+router.get('/mentee/login', (req, res, next)=> {
+    if (req.isAuthenticated()) {
+        console.log('user aldready authenticated')
+        res.redirect('/mentee/home')
+    } else {
+        return next()
+    }
+},(req, res)=> {
+    res.render('login') // this is the login page
 })
 
 router.put('/mentee/profile-complete',authentication, (req, res) => {
-    var tmp_id = req.flash('id')[0]
     req.body.info.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
-    Mentee.findByIdAndUpdate(tmp_id, req.body.info, (err, updated)=> {
+    Mentee.findByIdAndUpdate(req.user._id, req.body.info, (err, updated)=> {
         if (err) {
-            req.flash('id', tmp_id)
             res.redirect('/mentee/profile-complete')
         } else {
-            req.flash('id', tmp_id)
             res.redirect('/mentee/payments')
         }
     })
@@ -217,9 +218,7 @@ router.put('/mentee/profile-complete',authentication, (req, res) => {
 // remember email field of mentee login must be named username and not email
 router.post('/mentee/login', passport.authenticate('local', {failureRedirect: '/mentee/login'}), (req, res) => {
     if (typeof(req.user) !='undefined') {
-        _id = req.user._id.toString()
         console.log("successful login")
-        req.flash('id', req.user._id.toString())
         res.redirect('/mentee/home')
     } else {
         console.log('req user is undefined')
@@ -229,9 +228,7 @@ router.post('/mentee/login', passport.authenticate('local', {failureRedirect: '/
 })
 
 router.get('/mentee/home', authentication, (req, res)=> {
-
-    var tmp_id = req.flash('id')[0]
-    res.send('student home with id: '+tmp_id)
+    res.send('student home with id: '+req.user._id)
 })
 
 router.get('/mentee/email/:ver', (req, res) => {
@@ -245,7 +242,6 @@ router.get('/mentee/email/:ver', (req, res) => {
                 } else {
                     res.send('verified email thank you')
                 }
-
             })
         }
     })
@@ -254,39 +250,12 @@ router.get('/mentee/email/:ver', (req, res) => {
 // I had the option to use passport.authenticate however using that would automatically create user object in the next request which would limit use of the function
 function authentication(req, res, next) {
     //console.log('status of authentication is '+req.isAuthenticated)
-    if (req.isAuthenticated) {
+    if (req.isAuthenticated() ) {
         return next()
     } else {
+        console.log("unable to authenticate "+req.isAuthenticated())
         res.redirect('/mentee/login')
     }
 }
 // when actually implementing on website remember to change local host to website name
-function emailVerification(data) {
-    var user = {
-        email: data.username,
-        id: data._id
-    }
-    jwt.sign({user}, secret, {expiresIn: '24h'}, (err, token) => {
-        if (err) {
-            console.log(err)
-            return -1
-        }
-        var link = 'localhost:3333/mentee/email/'+token.toString()
-        var emailData = {
-            from: senderEmail,
-            to: email,
-            subject:  'Verify your Email',
-            html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href='+link+'>Verify Your Email</a>'
-        }
-        mg.messages().send(emailData, function (error, body) {
-            if (error) {
-                console.log(error)
-                return -2
-            } else {
-                console.log(body);
-                return 1
-            } 
-        });
-    })
-}
 module.exports = router
