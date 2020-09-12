@@ -50,7 +50,6 @@ passport.deserializeUser(Mentee.deserializeUser(function(id, done) {
         done(err, user)
     })
 }))
-router.use(flash())
 
 router.post('/mentee/register',async function(req, res) {
     if (typeof(req.body.name)!='undefined'
