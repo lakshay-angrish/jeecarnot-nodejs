@@ -89,9 +89,9 @@ router.post('/mentee/register/verify', async (req, res, next) => {
     && typeof(req.body.phone)!='undefined') {
         try {
             const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
-            
             if (response.type=='success') {
-          //if (true) {
+
+          //if (true) { // for testing purposes use this if loop.
                 Mentee.register(new Mentee({
                     name: req.body.name,
                     username: req.body.email,
@@ -133,8 +133,6 @@ router.post('/mentee/register/verify', async (req, res, next) => {
                                 });
                             }
                         })
-                        console.log("user is --")
-                        console.log(req.user)
                         req.logIn(newMentee, (erri)=> {
                             if (erri) {
                                 console.log(erri)
@@ -246,6 +244,10 @@ router.get('/mentee/email/:ver', (req, res) => {
     })
 })
 
+router.get('/mentee/logout', (req, res)=> {
+    req.logOut();
+    res.redirect('/')
+})
 // I had the option to use passport.authenticate however using that would automatically create user object in the next request which would limit use of the function
 function authentication(req, res, next) {
     //console.log('status of authentication is '+req.isAuthenticated)
