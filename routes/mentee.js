@@ -51,7 +51,8 @@ router.use(require("express-session")({
 }))
 router.use(passport.initialize())
 router.use(passport.session())
-passport.use(new localStrategy(Mentee.authenticate()))
+passport.use(Mentee.createStrategy())
+// passport.use(new localStrategy(Mentee.authenticate()))
 passport.serializeUser(Mentee.serializeUser(function(user, done) {
     done(null, user.id)
 }))
@@ -211,6 +212,25 @@ router.post('/mentee/login', passport.authenticate('local', {
 
 })
 
+router.post('/mentee/phonelogin', (req, res, next)=> {
+    if (req.body.phone!=undefined && req.body.password!=undefined) {
+        Mentee.findOne({phone: req.body.phone}, (err, ment)=> {
+            if (err) {
+                res.json({
+                    err
+                })
+            } else if (ment) {
+                req.body.username = ment.username
+                return next()
+            }
+        })
+    } else {
+        res.send('incomplete form')
+    }
+}, passport.authenticate('local', {
+    failureRedirect: '/mentee/login',
+    successRedirect: '/mentee/home'
+}))
 router.post('/mentee/otplogin', async (req, res) => {
     console.log(req.body.phone)
     console.log(req.body.phone != undefined)
