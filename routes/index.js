@@ -1,8 +1,13 @@
-const { render }          = require('ejs')
-const router              = require('express').Router()
+const {
+    render
+} = require('ejs')
+const router = require('express').Router()
 
 router.get('/', (req, res) => {
-    res.json({ success: true, msg: 'This is homepage' })
+    res.json({
+        success: true,
+        msg: 'This is homepage'
+    })
 })
 
 
