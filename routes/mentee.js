@@ -51,134 +51,103 @@ passport.deserializeUser(Mentee.deserializeUser(function(id, done) {
     })
 }))
 
-router.post('/mentee/register',async function(req, res) {
-    if (typeof(req.body.name)!='undefined'
-    && typeof(req.body.email)!='undefined'
-    && typeof(req.body.password)!='undefined'
-    && typeof(req.body.phone)!='undefined') {
-        try {
-        number = req.body.phone
-        const response = await msg91otp.send('+91'+number, {otp_expiry: 10})  
+router.post('/mentee/register',formFill, async function(req, res) {
+    try {
+    var number = req.body.phone
+    //console.log(number.length)
+    const response = await msg91otp.send('+91'+number, {otp_expiry: 10})  
+    if (response.type=='success') {
+        res.json({
+            message: 'success',
+        })
+    } else {
+        res.json({
+            message:'failure'
+        })
+    }
+    } catch (err) {
+        console.log("error in try");
+        res.json({
+            message: "error in TRY"
+        })
+    } 
+})
+
+router.post('/mentee/register/verify',formFill, async (req, res) => {
+    try {
+        const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
         if (response.type=='success') {
-            res.json({
-                message: 'success',
+        //if (true) { // for testing purposes use this if loop.
+            Mentee.register(new Mentee({
+                name: req.body.name,
+                username: req.body.email,
+                phone: req.body.phone,
+            }),  
+            req.body.password, function(err, newMentee) {
+                if (err) {
+                    console.log(err)
+                    res.redirect('/mentee/register')
+                } else {
+                    console.log(newMentee)
+                    console.log('redirecting to: '+'/mentee/'+newMentee._id.toString()+'/profile-complete')
+                    var user = {
+                        email: newMentee.username,
+                        id: newMentee._id
+                    }
+                    console.log('now entering jwt loop')
+                    jwt.sign({user}, secret, {expiresIn: '24h'}, (err, token) => {
+                        console.log('entered jwt loop')
+                        if (err) {
+                            console.log('encountered error')
+                            console.log(err)
+                        }
+                        else {
+                            console.log('no error 1')
+                            var link = 'localhost:3333/mentee/email/'+token.toString()
+                            var emailData = {
+                                from: senderEmail,
+                                to: user.email,
+                                subject:  'Verify your Email',
+                                html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href='+link+'>Verify Your Email</a>'
+                            }
+                            mg.messages().send(emailData, function (error, body) {
+                                if (error) {
+                                    console.log(error)
+                                } else {
+                                    console.log(body)
+                                } 
+                            });
+                        }
+                    })
+                    req.logIn(newMentee, (erri)=> {
+                        if (erri) {
+                            console.log(erri)
+                        }
+                    })
+                    res.redirect('/mentee/profile-complete')
+                }
             })
         } else {
             res.json({
                 message:'failure'
             })
         }
-        } catch (err) {
-            console.log("error in try");
-            res.json({
-                message: "error in TRY"
-            })
-        }
-        
-    } else {
-        res.json({
-            message: 'incomplete form'
-        })
+    } catch (error) {
+        console.log(error);
+        res.redirect('/mentee/register')
     }
 })
 
-router.post('/mentee/register/verify', async (req, res, next) => {
-    if (typeof(req.body.name)!='undefined'
-    && typeof(req.body.email)!='undefined'
-    && typeof(req.body.password)!='undefined'
-    && typeof(req.body.phone)!='undefined') {
-        try {
-            const response= await msg91otp.verify('+91'+req.body.phone, req.body.otp)
-            if (response.type=='success') {
-
-          //if (true) { // for testing purposes use this if loop.
-                Mentee.register(new Mentee({
-                    name: req.body.name,
-                    username: req.body.email,
-                    phone: req.body.phone,
-                }),  
-                req.body.password, function(err, newMentee) {
-                    if (err) {
-                        console.log(err)
-                        res.redirect('/mentee/register')
-                    } else {
-                        console.log(newMentee)
-                        console.log('redirecting to: '+'/mentee/'+newMentee._id.toString()+'/profile-complete')
-                        var user = {
-                            email: newMentee.username,
-                            id: newMentee._id
-                        }
-                        console.log('now entering jwt loop')
-                        jwt.sign({user}, secret, {expiresIn: '24h'}, (err, token) => {
-                            console.log('entered jwt loop')
-                            if (err) {
-                                console.log('encountered error')
-                                console.log(err)
-                            }
-                            else {
-                                console.log('no error 1')
-                                var link = 'localhost:3333/mentee/email/'+token.toString()
-                                var emailData = {
-                                    from: senderEmail,
-                                    to: user.email,
-                                    subject:  'Verify your Email',
-                                    html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href='+link+'>Verify Your Email</a>'
-                                }
-                                mg.messages().send(emailData, function (error, body) {
-                                    if (error) {
-                                        console.log(error)
-                                    } else {
-                                        console.log(body)
-                                    } 
-                                });
-                            }
-                        })
-                        req.logIn(newMentee, (erri)=> {
-                            if (erri) {
-                                console.log(erri)
-                            }
-                        })
-                        res.redirect('/mentee/profile-complete')
-                    }
-                })
-            } else {
-                res.json({
-                    message:'failure'
-                })
-            }
-        } catch (error) {
-            console.log(error);
-            res.redirect('/mentee/register')
-        }
-    } else {
-        console.log("form incomplete")
-        res.json({
-            message: 'incomplete form'
-        })
-    }
-    
-})
-
-router.post('/mentee/register/resend',async (req, res)=> {
-    if (typeof(req.body.name)!='undefined'
-    && typeof(req.body.email)!='undefined'
-    && typeof(req.body.password)!='undefined'
-    && typeof(req.body.phone)!='undefined') {
-        try {
-            const response = await msg91otp.retry("+91"+req.body.phone);
+router.post('/mentee/register/resend',formFill, async (req, res)=> {
+    try {
+        const response = await msg91otp.retry("+91"+req.body.phone);
         res.json({
             message: response.message
         })
-        } catch (error) {
-            console.log(error);
-            res.json({
-                message:'error in TRY'
-            })
-        }
-        
-    } else {
+    } catch (error) {
+        console.log(error);
         res.json({
-            message: 'incomplete form'
+            message:'error in TRY'
         })
     }
 })
@@ -256,6 +225,36 @@ function authentication(req, res, next) {
     } else {
         console.log("unable to authenticate "+req.isAuthenticated())
         res.redirect('/mentee/login')
+    }
+}
+function formFill(req, res, next) {
+if (typeof(req.body.name)!='undefined'
+    && typeof(req.body.email)!='undefined'
+    && typeof(req.body.password)!='undefined'
+    && typeof(req.body.phone)!='undefined' 
+    && req.body.phone.length == 10) {
+        Mentee.findOne({phone: req.body.phone}, (err, found) => {
+                if (err) {
+                    console.log('encountered an error')
+                    console.log(err)
+                    res.redirect('/mentee/register')
+                } else if (found) {
+                    console.log('aldready registered')
+                    res.redirect('/mentee/registered')
+                } else {
+                    return next()
+                }
+        })
+    } else if (req.body.phone.length != 10) {
+        console.log('wrong number');
+        res.json({
+            message: 'wrong number'
+        })
+    }else {
+        console.log('form incomplete');
+        res.json({
+            message: 'incomplete form'
+        })
     }
 }
 // when actually implementing on website remember to change local host to website name
