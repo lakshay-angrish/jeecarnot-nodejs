@@ -9,7 +9,7 @@
 
 <button class="sendotp-button" onclick="sendOTP()">Send otp</button>
 <button class="resendotp-button" onclick="resendOTP()">reSend otp</button>
-<!-- <button class="verifyotp-button" onclick="verifyOTP()">verify otp</button> -->
+<button class="verifyotp-button" onclick="verifyOTP()">verify otp</button>
 
 <button type="submit">SUBMIT</button>
 </form>
@@ -21,9 +21,9 @@
     document.getElementsByClassName("resendotp-button")[0].addEventListener("click", function (e) {
         e.preventDefault()
     });
-    // document.getElementsByClassName("verifyotp-button").addEventListener("click", function (e) {
-    //     e.preventDefault()
-    // });
+    document.getElementsByClassName("verifyotp-button")[0].addEventListener("click", function (e) {
+        e.preventDefault()
+    });
     async function sendOTP() {
 
         const rawResponse = await fetch('/mentee/register', {
@@ -72,27 +72,27 @@
 
     }
 
-    // async function verifyOTP() {
+    async function verifyOTP() {
+        console.log('hello')
+        const rawResponse = await fetch('/mentee/register/verify', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: document.getElementsByName('name')[0].value,
+                email: document.getElementsByName('email')[0].value,
+                phone: document.getElementsByName('phone')[0].value,
+                password: document.getElementsByName('password')[0].value,
+                otp: document.getElementsByName('otp')[0].value
 
-    //     const rawResponse = await fetch('/mentee/register/verify', {
-    //         method: 'POST',
-    //         headers: {
-    //             'Accept': 'application/json',
-    //             'Content-Type': 'application/json'
-    //         },
-    //         body: JSON.stringify({
-    //             name: document.getElementsByName('name')[0].value,
-    //             email: document.getElementsByName('email')[0].value,
-    //             phone: document.getElementsByName('phone')[0].value,
-    //             password: document.getElementsByName('password')[0].value,
-    //             otp: document.getElementsByName('otp')[0].value
+            })
+        });
+        const content = await rawResponse.json();
 
-    //         })
-    //     });
-    //     const content = await rawResponse.json();
+        console.log(content)
+        console.log(rawResponse)
 
-    //     console.log(content)
-    //     console.log(rawResponse)
-
-    // }
+    }
 </script>
