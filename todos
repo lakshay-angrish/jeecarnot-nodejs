@@ -1,0 +1,4 @@
+TODO
+if mobile exist before sending otp (shouldnot during register/should during login)
+if mail exist before sending otp
+use log4js to view errors in error.log file. during critical server errors use logger.error(err)
