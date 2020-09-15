@@ -72,6 +72,6 @@ var MenteeSchema = mongoose.Schema({
     }
 })
 
-MenteeSchema.plugin(passportLocalMongoose)
+MenteeSchema.plugin(passportLocalMongoose, {usernameField: 'email'})
 
 module.exports = mongoose.model('Mentee', MenteeSchema)
