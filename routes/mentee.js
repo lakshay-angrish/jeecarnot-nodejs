@@ -88,12 +88,13 @@ router.post('/mentee/register', formFill, async function (req, res) {
 
 router.post('/mentee/register/verify', formFill, async (req, res) => {
     try {
-        const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
-        if (response.type == 'success') {
-            //if (true) { // for testing purposes use this if loop.
+        //const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
+        //if (response.type == 'success') {
+            if (true) { // for testing purposes use this if loop.
+            console.log(req.body.email)
             Mentee.register(new Mentee({
                     name: req.body.name,
-                    username: req.body.email,
+                    email: req.body.email,
                     phone: req.body.phone,
                 }),
                 req.body.password,
@@ -105,7 +106,7 @@ router.post('/mentee/register/verify', formFill, async (req, res) => {
                         console.log(newMentee)
                         console.log('redirecting to: ' + '/mentee/' + newMentee._id.toString() + '/profile-complete')
                         var user = {
-                            email: newMentee.username,
+                            email: newMentee.email,
                             id: newMentee._id
                         }
                         console.log('now entering jwt loop')
@@ -168,7 +169,7 @@ router.post('/mentee/register/resend', formFill, async (req, res) => {
         })
     }
 })
-// throughout the code i will be treating email as the username for simplicity purposes
+
 router.get('/mentee/profile-complete', authentication, (req, res) => {
     res.send('ask more details') // this is where the page asking to complete profile comes. req has user details which can be used preload parts of form.
 })
@@ -198,7 +199,7 @@ router.put('/mentee/profile-complete', authentication, (req, res) => {
         }
     })
 })
-// remember email field of mentee login must be named username and not email
+
 router.post('/mentee/login', passport.authenticate('local', {
     failureRedirect: '/mentee/login'
 }), (req, res) => {
@@ -220,7 +221,7 @@ router.post('/mentee/phonelogin', (req, res, next)=> {
                     err
                 })
             } else if (ment) {
-                req.body.username = ment.username
+                req.body.email = ment.email
                 return next()
             }
         })
@@ -360,7 +361,7 @@ function formFill(req, res, next) {
             }
         })
         Mentee.findOne({
-            username: req.body.email
+            email: req.body.email
         }, (err, fnd) => {
             if (err) {
                 console.log('encountered unexpected error')
