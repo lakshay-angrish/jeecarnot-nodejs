@@ -26,11 +26,11 @@ var MenteeSchema = mongoose.Schema({
         type: String,
             default: ''
     },
-    lastAttemptYear: {
+    lastAttemptJeeYear: {
         type: String,
         default: ''
     },
-    percentile: {
+    lastAttemptJeepercentile: {
         type: String,
         default: ''
     },
@@ -42,11 +42,7 @@ var MenteeSchema = mongoose.Schema({
         type: String,
         default: 'self'
     },
-    coaching: {
-        type: String,
-        default: 'none'
-    },
-    otherExams: {
+    otherTargetExams: {
         type: String,
         default: ''
     },
@@ -61,6 +57,10 @@ var MenteeSchema = mongoose.Schema({
     expectations: {
         type: String,
         default: ''
+    },
+    language: {
+        type: String,
+        default: 'english'
     },
     plan: {
         type: String,
