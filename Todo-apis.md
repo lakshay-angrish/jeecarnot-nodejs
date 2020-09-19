@@ -223,7 +223,13 @@ GET mentee/account/membership
 
 Verification
 ### isEmailVerified
+get mentee/profile/is-email-verified
+
+result:unauthorized
+
+
 ### isProfileComplete
 
+get mentee/profile/is-profile-complete
 
-
+result:unauthorized
