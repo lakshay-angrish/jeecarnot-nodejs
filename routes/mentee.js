@@ -62,7 +62,7 @@ passport.deserializeUser(Mentee.deserializeUser(function (id, done) {
     })
 }))
 
-router.post('/mentee/register/api/send-otp', formFill, async function (req, res) {
+router.post('/mentee/register/api/send-otp', formFill, async (req, res)=> {
     try {
         var number = req.body.phone
         //console.log(number.length)
@@ -89,9 +89,9 @@ router.post('/mentee/register/api/send-otp', formFill, async function (req, res)
 
 router.post('/mentee/register', formFill, async (req, res) => {
     try {
-        //const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
-        //if (response.type == 'success') {
-        if (true) { // for testing purposes use this if loop.
+        const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
+        if (response.type == 'success') {
+        //if (true) { // for testing purposes use this if loop.
             console.log(req.body.email)
             Mentee.register(new Mentee({
                     name: req.body.name,
@@ -315,7 +315,7 @@ router.post("/mentee/login/api/send-otp", async (req, res) => {
         var response;
         Mentee.findOne({
             phone: req.body.phone
-        }, (err, res) => {
+        }, async (err, res) => {
             if (err) {
                 console.log(err);
                 res.json({
