@@ -30,6 +30,7 @@ var customStrategy = require('passport-custom')
 var localMongooseStrategy = require('passport-local-mongoose')
 var Mentee = require('../models/menteeModel') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
 var mongoose = require('mongoose');
+var Notifications = require("../models/notificationModel.js")
 const {
     assert
 } = require('console');
@@ -62,7 +63,7 @@ passport.deserializeUser(Mentee.deserializeUser(function (id, done) {
     })
 }))
 
-router.post('/mentee/register/api/send-otp', formFill, async (req, res)=> {
+router.post('/mentee/register/api/send-otp', formFill, async (req, res) => {
     try {
         var number = req.body.phone
         //console.log(number.length)
@@ -89,9 +90,9 @@ router.post('/mentee/register/api/send-otp', formFill, async (req, res)=> {
 
 router.post('/mentee/register', formFill, async (req, res) => {
     try {
-        const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
-        if (response.type == 'success') {
-        //if (true) { // for testing purposes use this if loop.
+        //const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
+        //if (response.type == 'success') {
+        if (true) { // for testing purposes use this if loop.
             console.log(req.body.email)
             Mentee.register(new Mentee({
                     name: req.body.name,
@@ -201,16 +202,27 @@ router.get('/mentee/login', (req, res, next) => {
 })
 
 router.put('/mentee/profile-complete', authentication, (req, res) => {
-    req.body.info.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
-    Mentee.findByIdAndUpdate(req.user._id, req.body.info, (err, updated) => {
+    req.body.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
+    req.body.planID = ""
+    Mentee.findByIdAndUpdate(req.user._id, req.body, (err, updated) => {
         if (err) {
             res.json({
                 result: 'failure',
                 err: 'updateFailed'
             })
         } else {
-            res.json({
-                result: 'success'
+            updated.profileVerification = true;
+            updated.save((err)=> {
+                if (err) {
+                    res.json({
+                        result: "failure",
+                        err: "updateFailed"
+                    })
+                } else {
+                    res.json({
+                        result: 'success'
+                    })
+                }
             })
         }
     })
@@ -241,7 +253,7 @@ router.post('/mentee/phonelogin', (req, res, next) => {
             if (err) {
                 res.json({
                     type: 'failure',
-                    err : err
+                    err: err
                 })
             } else if (ment) {
                 req.body.email = ment.email
@@ -264,47 +276,47 @@ router.post('/mentee/otplogin', async (req, res) => {
     console.log(req.body.phone != undefined)
     console.log(req.body.phone.length)
     if (req.body.phone != undefined && req.body.phone.length == 10) {
-            var response;
-            try {
-                response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
-                if (response.type == 'success') {
-                    Mentee.findOne({
-                        phone: req.body.phone
-                    }, (err, user) => {
-                        console.log(user)
+        var response;
+        try {
+            response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
+            if (response.type == 'success') {
+                Mentee.findOne({
+                    phone: req.body.phone
+                }, (err, user) => {
+                    console.log(user)
+                    console.log(err)
+                    if (err) {
                         console.log(err)
-                        if (err) {
-                            console.log(err)
-                            res.json({
-                                type: 'failure',
-                                err: err
-                            })
-                        } else if (user) {
-                            console.log(user)
-                            req.logIn(user, (erri) => {
-                                if (erri) {
-                                    console.log(erri)
-                                }
-                            })
-                            res.json({
-                                type: 'success'
-                            })
-                        } else {
-                            res.json({
-                                type: "failure",
-                                err: 'undefinedUser'
-                            })
-                        }
-                    })
-                }
-            } catch (error) {
-                console.log(error);
-                res.json({
-                    type: 'failure',
-                    err: 'failedVerification'
+                        res.json({
+                            type: 'failure',
+                            err: err
+                        })
+                    } else if (user) {
+                        console.log(user)
+                        req.logIn(user, (erri) => {
+                            if (erri) {
+                                console.log(erri)
+                            }
+                        })
+                        res.json({
+                            type: 'success'
+                        })
+                    } else {
+                        res.json({
+                            type: "failure",
+                            err: 'undefinedUser'
+                        })
+                    }
                 })
             }
-        
+        } catch (error) {
+            console.log(error);
+            res.json({
+                type: 'failure',
+                err: 'failedVerification'
+            })
+        }
+
     } else {
         res.send('form incomplete')
     }
@@ -383,7 +395,7 @@ router.post("/mentee/login/api/resend-otp", async (req, res) => {
 
 router.get('/mentee/home', authentication, (req, res) => {
     res.json({
-        message: 'id: '+ req.user._id
+        message: 'id: ' + req.user._id
     })
 })
 
@@ -412,6 +424,121 @@ router.get('/mentee/logout', (req, res) => {
     })
 })
 // I had the option to use passport.authenticate however using that would automatically create user object in the next request which would limit use of the function
+router.post('/mentee/profile/is-email-verified', authentication, (req, res) => {
+    if (req.user.emailVerification) {
+        res.json({
+            result: "authorized"
+        })
+    } else {
+        res.json({
+            result: "unauthorized"
+        })
+    }
+})
+
+router.post("/mentee/profile/is-profile-complete", authentication, (req, res) => {
+    if (req.user.profileVerification) {
+        res.json({
+            result: "authorized"
+        })
+    } else {
+        res.json({
+            result: "unauthorized"
+        })
+    }
+})
+
+router.get("/mentee/dashboard/notifications/fetch-all", authentication, (req, res) => {
+    Mentee.findById(req.user._id, (err, docu) => {
+        if (err) {
+            res.json({
+                message: "Error Encountered"
+            })
+        } else {
+            res.json({
+                notif: docu.notifications
+            })
+        }
+    })
+})
+
+router.get("/mentee/create-notifications", authentication, (req, res) => {
+    Mentee.findById(req.user._id, (err, docu) => {
+        if (err) {
+            res.json({
+                message: "error"
+            })
+        } else {
+            var arr = docu.notifications
+            arr.push({
+                title: "hero",
+                description: "Testing",
+                button: "Cool"
+            })
+            Mentee.findByIdAndUpdate(req.user._id, {
+                notifications: arr
+            }, (err, call) => {
+                if (err) {
+                    res.json({
+                        message: "update error"
+                    })
+                } else {
+                    res.json({
+                        message: 'success'
+                    })
+                }
+            })
+
+        }
+    })
+})
+
+router.post("/mentee/dashhboard/notifications/delete-one", authentication, (req, res) => {
+    Mentee.findById(req.user._id, (err, docu) => {
+        if (err) {
+            res.json({
+                message: "failed"
+            })
+        } else {
+            docu.notifications.id(req.body.notificationid).remove()
+        }
+        docu.save((err) => {
+            if (err) {
+                res.json({
+                    message: "save error"
+                })
+            } else {
+                res.json({
+                    message: "success"
+                })
+            }
+        })
+    })
+})
+
+router.post("/mentee/dashhboard/notifications/mark-as-read", (req, res) => {
+    Mentee.findById(req.user._id, (err, docu) => {
+        if (err) {
+            res.json({
+                message: "failed"
+            })
+        } else {
+            docu.notifications.id(req.body.notificationid).read = true
+        }
+        docu.save((err) => {
+            if (err) {
+                res.json({
+                    message: "save error"
+                })
+            } else {
+                res.json({
+                    message: "success"
+                })
+            }
+        })
+    })
+})
+
 function authentication(req, res, next) {
     //console.log('status of authentication is '+req.isAuthenticated)
     if (req.isAuthenticated()) {

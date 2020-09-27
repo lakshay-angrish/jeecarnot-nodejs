@@ -1,6 +1,6 @@
 var mongoose = require("mongoose")
 var passportLocalMongoose = require("passport-local-mongoose")
-
+var Notifications = require("./notificationModel.js")
 var MenteeSchema = mongoose.Schema({
     name: String,
     password: String,
@@ -9,6 +9,10 @@ var MenteeSchema = mongoose.Schema({
     emailVerification: {
         type: Boolean,
         default: false
+    },
+    profileVerification: {
+        type: Boolean,
+        default: false,
     },
     alternatephone: {
         type: String,
@@ -69,9 +73,12 @@ var MenteeSchema = mongoose.Schema({
     planID: {
         type: String,
         default: 'none'
-    }
+    },
+    notifications: [Notifications],
 })
 
-MenteeSchema.plugin(passportLocalMongoose, {usernameField: 'email'})
+MenteeSchema.plugin(passportLocalMongoose, {
+    usernameField: 'email'
+})
 
 module.exports = mongoose.model('Mentee', MenteeSchema)
