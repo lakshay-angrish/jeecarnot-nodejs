@@ -26,7 +26,7 @@
     });
     async function sendOTP() {
 
-        const rawResponse = await fetch('/mentee/register', {
+        const rawResponse = await fetch('/mentee/register/api/send-otp', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -50,7 +50,7 @@
 
     async function resendOTP() {
 
-        const rawResponse = await fetch('/mentee/register/resend', {
+        const rawResponse = await fetch('/mentee/register/api/resend-otp', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -74,7 +74,7 @@
 
     async function verifyOTP() {
         console.log('hello')
-        const rawResponse = await fetch('/mentee/register/verify', {
+        const rawResponse = await fetch('/mentee/register', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
