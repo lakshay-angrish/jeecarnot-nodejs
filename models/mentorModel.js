@@ -7,8 +7,8 @@ var MentorSchema = mongoose.Schema({
     phone: String,
     whatsapp: String
 })
-MenteeSchema.plugin(passportLocalMongoose, {
+MentorSchema.plugin(passportLocalMongoose, {
     usernameField: 'email'
 })
 
-module.exports = mongoose.model('Mentor', MenteeSchema)
+module.exports = mongoose.model('Mentor', MentorSchema)

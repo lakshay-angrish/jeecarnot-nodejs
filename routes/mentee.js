@@ -30,6 +30,7 @@ var customStrategy = require('passport-custom')
 var localMongooseStrategy = require('passport-local-mongoose')
 var Mentee = require('../models/menteeModel') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
 var Mentor = require("../models/mentorModel")
+var Feedback = require("../models/feedbackModel")
 var mongoose = require('mongoose');
 var Notifications = require("../models/notificationModel.js")
 const {
@@ -213,7 +214,7 @@ router.put('/mentee/profile-complete', authentication, (req, res) => {
             })
         } else {
             updated.profileVerification = true;
-            updated.save((err)=> {
+            updated.save((err) => {
                 if (err) {
                     res.json({
                         result: "failure",
@@ -229,9 +230,23 @@ router.put('/mentee/profile-complete', authentication, (req, res) => {
     })
 })
 
-router.post('/mentee/login', passport.authenticate('local', {
-    failureRedirect: '/mentee/login'
-}), (req, res) => {
+router.post('/mentee/login', (req, res, next) => passport.authenticate('local', (err, user, passErr) => {
+    if (!b) {
+        if (passErr.name = 'IncorrectUsernameError' || passErr.name == 'IncorrectPasswordError')
+            res.json({
+                type: 'failure',
+                err: 'incorrectCredentials'
+            })
+        else {
+            // critical error 
+            // logger.error('unknown error occured while logging in',{body:req.body})
+            res.json({
+                type: 'failure',
+                err: 'unknown'
+            })
+        }
+    }
+})(req, res, next), (req, res) => {
     if (typeof (req.user) != 'undefined') {
         console.log("successful login")
         res.json({
@@ -539,6 +554,22 @@ router.post("/mentee/dashhboard/notifications/mark-as-read", (req, res) => {
         })
     })
 })
+
+router.post("/mentee/submit-feedback", authentication, (req, res) => {
+    Feedback.create(req.body.feedback, (err, dat) => {
+        if (err) {
+            res.json({
+                result: "error",
+                error: err
+            })
+        } else {
+            res.json({
+                result: "success"
+            })
+        }
+    })
+})
+
 
 function authentication(req, res, next) {
     //console.log('status of authentication is '+req.isAuthenticated)

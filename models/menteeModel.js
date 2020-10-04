@@ -1,6 +1,7 @@
 var mongoose = require("mongoose")
 var passportLocalMongoose = require("passport-local-mongoose")
 var Notifications = require("./notificationModel.js")
+var Requests = require("./requestModel.js")
 var MenteeSchema = mongoose.Schema({
     name: String,
     password: String,

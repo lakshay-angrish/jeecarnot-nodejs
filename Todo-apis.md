@@ -12,46 +12,46 @@ onVerifyAgain message: 'Mobile no. already verified'
 onRetryLate   message: 'otp expired'
 
 # (REGISTERATION)
-### SendOTP 
+### SendOTP *
 POST /mentee/register/api/send-otp
 {name,phone,email,password}
 
 {type:success}
 {type:failure,err:duplicateMobile}
 
-### ResendOTP 
+### ResendOTP *
 POST /mentee/register/api/resend-otp
 {name,phone,email,password}
 
 {type:success}
 
-### Verify OTP and register 
+### Verify OTP and register *
 POST /mentee/register
 {name,phone,email,password,otp}
 
 {type:success}
 
 
-### Complete profile 
+### Complete profile *
 PUT /mentee/complete-profile
 {}
 
 {result:'success'}
 
 # (LOGIN)
-### SendOTP 
+### SendOTP *
 POST /mentee/login/api/send-otp
 {phone}
 {type:success}
 
-### ResendOTP 
-POST /mentee/login/api/send-otp 
+### ResendOTP *
+POST /mentee/login/api/resend-otp 
 {phone}
 {type:success}
  
-### Login (email,password) POST /mentee/login
-### Login (phone,password) POST /mentee/phonelogin
-### Login (phone,otp) POST /mentee/otplogin
+### Login (email,password) POST /mentee/login *
+### Login (phone,password) POST /mentee/phonelogin *
+### Login (phone,otp) POST /mentee/otplogin *
 
 
 
@@ -62,7 +62,7 @@ POST /mentee/login/api/send-otp
 GET /mentee/dashboard/quote
 {quote:"Lorem ipsum lorem xyz",by:"Robert Kiyosaki"}
 
-### Mentor - Fetch mentor details  
+### Mentor - Fetch mentor details  *
 GET /mentee/dashboard/my-mentor-details
 {mentorName,mentorPhone,mentorEmail,mentorId,mentorImage}
 
@@ -80,10 +80,10 @@ Request material
         "pastrequests": [
             {
             "requestid": "reqid",
-                "material": [
-                    "p-cb-th",
-                    "m-st-fs"
-                ],
+            "material": [
+                "p-cb-th",
+                "m-st-fs"
+            ],
             "status": "1"
             },
             {
@@ -110,7 +110,7 @@ Request material
 ### download pdf
     GET /mentee/library/material/download?token=jwtxyztoken123
 
-# Notification
+# Notification *
     -fetch all
     GET /mentee/dashhboard/notifications/fetch-all
 
@@ -171,7 +171,7 @@ GET /mentee/helpdesk/past-tickets
     ]
 }
 
-Feedback- Submit Feedback
+### Feedback- Submit Feedback *
 POST /mentee/submit-feedback
 with all fields (see sample-feedback for all fields) google form https://docs.google.com/forms/d/e/1FAIpQLSfWU4YHk4U6q0WBaWF_cI7VURM_YDMAaXYS1RT8CRwoP0mvJA/viewform
 
@@ -222,13 +222,13 @@ GET mentee/account/membership
 }
 
 Verification
-### isEmailVerified
+### isEmailVerified *
 get mentee/profile/is-email-verified
 
 result:unauthorized
 
 
-### isProfileComplete
+### isProfileComplete *
 
 get mentee/profile/is-profile-complete
 
