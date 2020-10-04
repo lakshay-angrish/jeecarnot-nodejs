@@ -3,6 +3,8 @@ routes/.env
 
 .env
 test.http
+.http
+./test.http
 
 logs/access.log
 
