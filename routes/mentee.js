@@ -29,6 +29,7 @@ var localStrategy = require('passport-local')
 var customStrategy = require('passport-custom')
 var localMongooseStrategy = require('passport-local-mongoose')
 var Mentee = require('../models/menteeModel') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
+var Mentor = require("../models/mentorModel")
 var mongoose = require('mongoose');
 var Notifications = require("../models/notificationModel.js")
 const {

@@ -75,6 +75,10 @@ var MenteeSchema = mongoose.Schema({
         default: 'none'
     },
     notifications: [Notifications],
+    mentorID: {
+        type: String,
+        default: "None"
+    }
 })
 
 MenteeSchema.plugin(passportLocalMongoose, {
