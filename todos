@@ -2,3 +2,36 @@ TODO
 if mobile exist before sending otp (shouldnot during register/should during login)
 if mail exist before sending otp
 use log4js to view errors in error.log file. during critical server errors use logger.error(err)
+
+PUT: mentee/complete-profile only selected below fields can be updated. Using current way user can update anything including payment details. so restrict it to given fields
+{
+    alternatephone:
+    parentname:
+    parentPhone:
+    class:
+    lastAttemptJeeYear:
+    lastAttemptJeepercentile:
+    targetYear:
+    modePreparation:
+    otherTargetExams:
+    language:
+    materialRequirement:
+    firstHear:
+    whyWant:
+    expectations:    
+}
+
+RES:
+{
+    type:'success/failure',
+    msg:'profile successfuly updated'
+}
+
+REVIEW
+language default:''
+mentor default:none not None
+
+fetch all notifications key should be notification not notif
+
+TODO
+add created_at field in mentee profile, when account is created
