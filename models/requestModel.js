@@ -1,16 +1,13 @@
 var mongoose = require("mongoose")
 var requestSchema = mongoose.Schema({
-    requestjwt: {
+    menteeID: {
         type: String,
         default: ""
     },
-    material: {
-        type: String,
-        default: ""
-    },
+    material: [String],
     status: {
         type: String,
-        default: ""
+        default: "0"
     },
 })
-module.exports = requestSchema
+module.exports = mongoose.model("Request", requestSchema)

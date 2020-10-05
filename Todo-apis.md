@@ -67,13 +67,13 @@ GET /mentee/dashboard/my-mentor-details
 {mentorName,mentorPhone,mentorEmail,mentorId,mentorImage}
 
 Request material
-#### Submit material Request
+#### Submit material Request *
     POST /mentee/dashboard/material-requests 
     {requests:["p-cb-th","m-st-fs"]}
     
     {result:'success'}
 
-#### View past requests
+#### View past requests *
     GET /mentee/dashboard/past-material-requests 
 
     {
@@ -178,7 +178,7 @@ with all fields (see sample-feedback for all fields) google form https://docs.go
 {result:'success'}
 
 Account
-### Change password
+### Change password *
 PUT /mentee/account/change-password
 {oldPassword,newPassword}
 

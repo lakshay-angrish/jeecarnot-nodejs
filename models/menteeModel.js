@@ -76,6 +76,7 @@ var MenteeSchema = mongoose.Schema({
         default: 'none'
     },
     notifications: [Notifications],
+    requests: [String],
     mentorID: {
         type: String,
         default: "None"

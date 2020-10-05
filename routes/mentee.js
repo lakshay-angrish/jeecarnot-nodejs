@@ -31,6 +31,7 @@ var localMongooseStrategy = require('passport-local-mongoose')
 var Mentee = require('../models/menteeModel') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
 var Mentor = require("../models/mentorModel")
 var Feedback = require("../models/feedbackModel")
+var Request = require("../models/requestModel")
 var mongoose = require('mongoose');
 var Notifications = require("../models/notificationModel.js")
 const {
@@ -230,25 +231,12 @@ router.put('/mentee/profile-complete', authentication, (req, res) => {
     })
 })
 
-router.post('/mentee/login', (req, res, next) => passport.authenticate('local', (err, user, passErr) => {
-    if (!b) {
-        if (passErr.name = 'IncorrectUsernameError' || passErr.name == 'IncorrectPasswordError')
-            res.json({
-                type: 'failure',
-                err: 'incorrectCredentials'
-            })
-        else {
-            // critical error 
-            // logger.error('unknown error occured while logging in',{body:req.body})
-            res.json({
-                type: 'failure',
-                err: 'unknown'
-            })
-        }
-    }
-})(req, res, next), (req, res) => {
+router.post('/mentee/login', passport.authenticate('local', {
+    failureMessage: "Wrong Credentials",
+}), (req, res) => {
     if (typeof (req.user) != 'undefined') {
-        console.log("successful login")
+        console.log("successful login of :")
+        console.log(req.user)
         res.json({
             type: 'success'
         })
@@ -570,6 +558,72 @@ router.post("/mentee/submit-feedback", authentication, (req, res) => {
     })
 })
 
+router.post("/mentee/account/change-password", authentication, (req, res) => {
+    if (req.body.oldPassword != undefined & req.body.newPassword != undefined) {
+        Mentee.findById(req.user._id, (err, ment) => {
+            if (err) {
+                res.json({
+                    message: "error"
+                })
+            } else {
+                try {
+                    ment.changePassword(req.body.oldPassword, req.body.newPassword, (erro) => {
+                        if (erro.name == 'IncorrectPasswordError') {
+                            res.json({
+                                result: "error",
+                                erro
+                            })
+                        } else {
+                            ment.save()
+                            res.json({
+                                result: "success"
+                            })
+                        }
+                    })
+                } catch (error) {
+                    res.json({
+                        result: "error in changePassowrd",
+                        error
+                    })
+                }
+            }
+        })
+    } else {
+        res.json({
+            result: "incomplete form"
+        })
+    }
+})
+
+router.post("/mentee/dashboard/material-request", authentication, (req, res) => {
+    Request.create({
+        material: req.body.material,
+        menteeID: req.user._id,
+    }, (err, dat)=>{
+        if (err) {
+            res.json({
+                result: "error",
+                err
+            })
+        } else {
+            Mentee.findById(req.user._id, (erro, doc)=> {
+                if (erro) {
+                    res.json({
+                        result: "error",
+                        erro
+                    })
+                } else {
+                    doc.requests.push(dat._id);
+                    doc.save()
+                    res.json({
+                        result: "success",
+                        dat
+                    })
+                }
+            })
+        }
+    })
+})
 
 function authentication(req, res, next) {
     //console.log('status of authentication is '+req.isAuthenticated)
