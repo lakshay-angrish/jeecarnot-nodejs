@@ -231,23 +231,42 @@ router.put('/mentee/profile-complete', authentication, (req, res) => {
     })
 })
 
-router.post('/mentee/login', passport.authenticate('local', {
-    failureMessage: "Wrong Credentials",
-}), (req, res) => {
-    if (typeof (req.user) != 'undefined') {
-        console.log("successful login of :")
-        console.log(req.user)
-        res.json({
-            type: 'success'
-        })
-    } else {
-        console.log('req user is undefined')
+router.post('/mentee/login',  (req, res, next) => {passport.authenticate('local', (err, user, info) => {
+    if(err)
+    {    // critical error 
+        // logger.error('err is not null, unknown error occured while logging in',{body:req.body},{info:info},{err:err})
         res.json({
             type: 'failure',
-            err: 'userUndefined'
-        })
+            err: 'errIsNotNull'
+        })}
+    else  {
+        if (user)
+        {
+            req.logIn(user,error=>{
+                if(!error)
+                res.json({type: 'success'})
+                else
+                res.json({type: 'failure',err:'errorInReq.Login'})
+            })
+        }
+        else
+        {
+            if (info.name == 'IncorrectUsernameError' || info.name == 'IncorrectPasswordError')
+                res.json({
+                    type: 'failure',
+                    err: 'incorrectCredentials',
+                })
+            else {
+                // critical error 
+                // logger.error('unknown error occured while logging in',{body:req.body},{info:info},{err:err})
+                res.json({
+                    type: 'failure',
+                    err: 'unknown'
+                })
+            }
+        }
     }
-})
+})(req, res, next)})
 
 router.post('/mentee/phonelogin', (req, res, next) => {
     if (req.body.phone != undefined && req.body.password != undefined) {
