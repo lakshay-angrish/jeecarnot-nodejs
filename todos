@@ -36,3 +36,22 @@ fetch all notifications key should be notification not notif
 TODO
 add created_at timestamp in all models
 in materials and feedback add updated_at also
+
+wrap everything in try catch, eg. in notification apis
+
+auth middleware in mark as read notification
+
+TODO
+material requests api (workflow)
+
+-mentee sends material requests
+-validate the request (for now use a function to chec wheather every request start with 'p' or 'c' or 'm' will add more validations later)
+-remove the already own material from the request
+-log every individual request as new request in profile as well as in collection
+
+	eg: mentee asks for math-probability,physics-electrostats and chemistry-thermo (and mentee already have chemistry-thermo becoz he requested few days back and was issued)
+	so only math-probability and physics-electrostats request will be logged/stored individually (so that makes it two requests, one for math and one for physics) and as he alredy have chemistry-thermo so that request will be dropped and will not be logged anywhere
+	
+	when his mentor views his requests, he can see all requests from mentee and select few or all and approve them. status will be updated in collection as well as in mentees profile
+
+	finally when admin sees the requests and approves or declines, the status will be updated in mentees profile and the request will bee deleted from collection as there is no point of storing completed requests in database
