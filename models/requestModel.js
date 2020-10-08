@@ -4,10 +4,10 @@ var requestSchema = mongoose.Schema({
         type: String,
         default: ""
     },
-    material: [String],
+    material: String,
     status: {
         type: String,
         default: "0"
     },
-})
+}, {timestamps: true})
 module.exports = mongoose.model("Request", requestSchema)

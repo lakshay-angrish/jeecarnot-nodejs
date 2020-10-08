@@ -26,12 +26,13 @@ var request = require('request')
 var http = require('https')
 var passport = require("passport")
 var localStrategy = require('passport-local')
-var customStrategy = require('passport-custom')
 var localMongooseStrategy = require('passport-local-mongoose')
 var Mentee = require('../models/menteeModel') // i have added extra field of plan ID which would be unique to each transaction (can be transaction id)
 var Mentor = require("../models/mentorModel")
 var Feedback = require("../models/feedbackModel")
 var Request = require("../models/requestModel")
+var Help = require("../models/helpModel")
+var Payment = require("../models/paymentModel")
 var mongoose = require('mongoose');
 var Notifications = require("../models/notificationModel.js")
 const {
@@ -194,99 +195,118 @@ router.get('/mentee/register', (req, res) => {
 })
 
 router.get('/mentee/login', (req, res, next) => {
-    if (req.isAuthenticated()) {
-        console.log('user aldready authenticated')
-        res.redirect('/mentee/home')
-    } else {
-        return next()
-    }
-}, (req, res) => {
-    res.render('login') // this is the login page
+
+        if (req.isAuthenticated()) {
+            console.log('user aldready authenticated')
+            res.redirect('/mentee/home')
+        } else {
+            return next()
+        }
+    }, (req, res) => {
+        res.render('login') // this is the login page
+    
 })
 
 router.put('/mentee/profile-complete', authentication, (req, res) => {
-    req.body.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
-    req.body.planID = ""
-    Mentee.findByIdAndUpdate(req.user._id, req.body, (err, updated) => {
-        if (err) {
-            res.json({
-                result: 'failure',
-                err: 'updateFailed'
-            })
-        } else {
-            updated.profileVerification = true;
-            updated.save((err) => {
-                if (err) {
-                    res.json({
-                        result: "failure",
-                        err: "updateFailed"
-                    })
-                } else {
-                    res.json({
-                        result: 'success'
-                    })
-                }
-            })
-        }
-    })
-})
-
-router.post('/mentee/login',  (req, res, next) => {passport.authenticate('local', (err, user, info) => {
-    if(err)
-    {    // critical error 
-        // logger.error('err is not null, unknown error occured while logging in',{body:req.body},{info:info},{err:err})
-        res.json({
-            type: 'failure',
-            err: 'errIsNotNull'
-        })}
-    else  {
-        if (user)
-        {
-            req.logIn(user,error=>{
-                if(!error)
-                res.json({type: 'success'})
-                else
-                res.json({type: 'failure',err:'errorInReq.Login'})
-            })
-        }
-        else
-        {
-            if (info.name == 'IncorrectUsernameError' || info.name == 'IncorrectPasswordError')
-                res.json({
-                    type: 'failure',
-                    err: 'incorrectCredentials',
-                })
-            else {
-                // critical error 
-                // logger.error('unknown error occured while logging in',{body:req.body},{info:info},{err:err})
-                res.json({
-                    type: 'failure',
-                    err: 'unknown'
-                })
-            }
-        }
-    }
-})(req, res, next)})
-
-router.post('/mentee/phonelogin', (req, res, next) => {
-    if (req.body.phone != undefined && req.body.password != undefined) {
-        Mentee.findOne({
-            phone: req.body.phone
-        }, (err, ment) => {
+    try {
+        req.body.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
+        req.body.planID = ""
+        Mentee.findByIdAndUpdate(req.user._id, req.body, (err, updated) => {
             if (err) {
                 res.json({
-                    type: 'failure',
-                    err: err
+                    result: 'failure',
+                    err: 'updateFailed'
                 })
-            } else if (ment) {
-                req.body.email = ment.email
-                return next()
+            } else {
+                updated.profileVerification = true;
+                updated.save((err) => {
+                    if (err) {
+                        res.json({
+                            result: "failure",
+                            err: "updateFailed"
+                        })
+                    } else {
+                        res.json({
+                            result: 'success'
+                        })
+                    }
+                })
             }
         })
-    } else {
+    } catch (error) {
         res.json({
-            type: 'failure',
-            err: 'incomplete'
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post('/mentee/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        if (err) { // critical error 
+            // logger.error('err is not null, unknown error occured while logging in',{body:req.body},{info:info},{err:err})
+            res.json({
+                type: 'failure',
+                err: 'errIsNotNull'
+            })
+        } else {
+            if (user) {
+                req.logIn(user, error => {
+                    if (!error)
+                        res.json({
+                            type: 'success'
+                        })
+                    else
+                        res.json({
+                            type: 'failure',
+                            err: 'errorInReq.Login'
+                        })
+                })
+            } else {
+                if (info.name == 'IncorrectUsernameError' || info.name == 'IncorrectPasswordError')
+                    res.json({
+                        type: 'failure',
+                        err: 'incorrectCredentials',
+                    })
+                else {
+                    // critical error 
+                    // logger.error('unknown error occured while logging in',{body:req.body},{info:info},{err:err})
+                    res.json({
+                        type: 'failure',
+                        err: 'unknown'
+                    })
+                }
+            }
+        }
+    })(req, res, next)
+})
+
+router.post('/mentee/phonelogin', (req, res, next) => {
+    try {
+        if (req.body.phone != undefined && req.body.password != undefined) {
+            Mentee.findOne({
+                phone: req.body.phone
+            }, (err, ment) => {
+                if (err) {
+                    res.json({
+                        type: 'failure',
+                        err: err
+                    })
+                } else if (ment) {
+                    req.body.email = ment.email
+                    return next()
+                }
+            })
+        } else {
+            res.json({
+                type: 'failure',
+                err: 'incomplete'
+            })
+        }
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
         })
     }
 }, passport.authenticate('local', {
@@ -295,353 +315,741 @@ router.post('/mentee/phonelogin', (req, res, next) => {
 }))
 
 router.post('/mentee/otplogin', async (req, res) => {
-    console.log(req.body.phone)
-    console.log(req.body.phone != undefined)
-    console.log(req.body.phone.length)
-    if (req.body.phone != undefined && req.body.phone.length == 10) {
-        var response;
-        try {
-            response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
-            if (response.type == 'success') {
-                Mentee.findOne({
-                    phone: req.body.phone
-                }, (err, user) => {
-                    console.log(user)
-                    console.log(err)
-                    if (err) {
-                        console.log(err)
-                        res.json({
-                            type: 'failure',
-                            err: err
-                        })
-                    } else if (user) {
+    try {
+        console.log(req.body.phone)
+        console.log(req.body.phone != undefined)
+        console.log(req.body.phone.length)
+        if (req.body.phone != undefined && req.body.phone.length == 10) {
+            var response;
+            try {
+                response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
+                if (response.type == 'success') {
+                    Mentee.findOne({
+                        phone: req.body.phone
+                    }, (err, user) => {
                         console.log(user)
-                        req.logIn(user, (erri) => {
-                            if (erri) {
-                                console.log(erri)
-                            }
-                        })
-                        res.json({
-                            type: 'success'
-                        })
-                    } else {
-                        res.json({
-                            type: "failure",
-                            err: 'undefinedUser'
-                        })
-                    }
+                        console.log(err)
+                        if (err) {
+                            console.log(err)
+                            res.json({
+                                type: 'failure',
+                                err: err
+                            })
+                        } else if (user) {
+                            console.log(user)
+                            req.logIn(user, (erri) => {
+                                if (erri) {
+                                    console.log(erri)
+                                }
+                            })
+                            res.json({
+                                type: 'success'
+                            })
+                        } else {
+                            res.json({
+                                type: "failure",
+                                err: 'undefinedUser'
+                            })
+                        }
+                    })
+                }
+            } catch (error) {
+                console.log(error);
+                res.json({
+                    type: 'failure',
+                    err: 'failedVerification'
                 })
             }
-        } catch (error) {
-            console.log(error);
-            res.json({
-                type: 'failure',
-                err: 'failedVerification'
-            })
-        }
 
-    } else {
-        res.send('form incomplete')
+        } else {
+            res.send('form incomplete')
+        }
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
     }
 })
 
 router.post("/mentee/login/api/send-otp", async (req, res) => {
-    if (req.body.phone != undefined && req.body.phone.length == 10) {
-        var response;
-        Mentee.findOne({
-            phone: req.body.phone
-        }, async (err, res) => {
-            if (err) {
-                console.log(err);
-                res.json({
-                    type: 'failure',
-                    err: err
-                })
-            } else if (res == null) {
-                res.json({
-                    type: 'failure',
-                    err: 'noNumberInData'
-                })
-            } else {
-                try {
-                    response = await msg91otp.send('+91' + req.body.phone, {
-                        otp_expiry: 10
-                    })
-                    if (response.type == 'success') {
-                        res.json({
-                            type: 'success',
-                            response
-                        })
-                    }
-                } catch (e) {
-                    console.log(e)
-                    response = e
+    try {
+        if (req.body.phone != undefined && req.body.phone.length == 10) {
+            var response;
+            Mentee.findOne({
+                phone: req.body.phone
+            }, async (err, res) => {
+                if (err) {
+                    console.log(err);
                     res.json({
                         type: 'failure',
-                        err: response
+                        err: err
                     })
+                } else if (res == null) {
+                    res.json({
+                        type: 'failure',
+                        err: 'noNumberInData'
+                    })
+                } else {
+                    try {
+                        response = await msg91otp.send('+91' + req.body.phone, {
+                            otp_expiry: 10
+                        })
+                        if (response.type == 'success') {
+                            res.json({
+                                type: 'success',
+                                response
+                            })
+                        }
+                    } catch (e) {
+                        console.log(e)
+                        response = e
+                        res.json({
+                            type: 'failure',
+                            err: response
+                        })
+                    }
                 }
-            }
-        })
-    } else {
+            })
+        } else {
+            res.json({
+                type: 'failure',
+                err: 'incompleteForm'
+            })
+        }
+    } catch (error) {
         res.json({
-            type: 'failure',
-            err: 'incompleteForm'
+            result: "unexpected error",
+            error
         })
     }
 })
 
 router.post("/mentee/login/api/resend-otp", async (req, res) => {
-    if (req.body.phone != undefined && req.body.phone.length == 10) {
-        try {
-            var response = await msg91otp.retry('+91' + req.body.phone, {
-                otp_expiry: 10
-            })
-            res.json({
-                type: 'success',
-                err: response
-            })
-        } catch (e) {
-            console.log(e)
+    try {
+        if (req.body.phone != undefined && req.body.phone.length == 10) {
+            try {
+                var response = await msg91otp.retry('+91' + req.body.phone, {
+                    otp_expiry: 10
+                })
+                res.json({
+                    type: 'success',
+                    err: response
+                })
+            } catch (e) {
+                console.log(e)
+                res.json({
+                    type: 'failure',
+                    err: e
+                })
+            }
+        } else {
             res.json({
                 type: 'failure',
-                err: e
+                err: 'incompleteForm'
             })
         }
-    } else {
+    } catch (error) {
         res.json({
-            type: 'failure',
-            err: 'incompleteForm'
+            result: "unexpected error",
+            error
         })
     }
 })
 
 router.get('/mentee/home', authentication, (req, res) => {
-    res.json({
-        message: 'id: ' + req.user._id
-    })
+    try {
+        res.json({
+            message: 'id: ' + req.user._id
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
 })
 
 router.get('/mentee/email/:ver', (req, res) => {
-    jwt.verify(req.params.ver, secret, (err, authData) => {
-        if (err) {
-            res.send("Unable to verify try again")
-        } else {
-            Mentee.findByIdAndUpdate(authData.user.id, {
-                emailVerification: true
-            }, (err, updated) => {
-                if (err) {
-                    res.send("Unable to verify try again")
-                } else {
-                    res.send('verified email thank you')
-                }
-            })
-        }
-    })
+    try {
+        jwt.verify(req.params.ver, secret, (err, authData) => {
+            if (err) {
+                res.send("Unable to verify try again")
+            } else {
+                Mentee.findByIdAndUpdate(authData.user.id, {
+                    emailVerification: true
+                }, (err, updated) => {
+                    if (err) {
+                        res.send("Unable to verify try again")
+                    } else {
+                        res.send('verified email thank you')
+                    }
+                })
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
 })
 
 router.get('/mentee/logout', (req, res) => {
-    req.logOut();
-    res.json({
-        message: 'loggedOut'
-    })
+    try {
+        req.logOut();
+        res.json({
+            message: 'loggedOut'
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
 })
 // I had the option to use passport.authenticate however using that would automatically create user object in the next request which would limit use of the function
 router.post('/mentee/profile/is-email-verified', authentication, (req, res) => {
-    if (req.user.emailVerification) {
+    try {
+        if (req.user.emailVerification) {
+            res.json({
+                result: "authorized"
+            })
+        } else {
+            res.json({
+                result: "unauthorized"
+            })
+        }
+    } catch (error) {
         res.json({
-            result: "authorized"
-        })
-    } else {
-        res.json({
-            result: "unauthorized"
+            result: "unexpected error",
+            error
         })
     }
 })
 
 router.post("/mentee/profile/is-profile-complete", authentication, (req, res) => {
-    if (req.user.profileVerification) {
+    try {
+        if (req.user.profileVerification) {
+            res.json({
+                result: "authorized"
+            })
+        } else {
+            res.json({
+                result: "unauthorized"
+            })
+        }
+    } catch (error) {
         res.json({
-            result: "authorized"
-        })
-    } else {
-        res.json({
-            result: "unauthorized"
+            result: "unexpected error",
+            error
         })
     }
 })
 
 router.get("/mentee/dashboard/notifications/fetch-all", authentication, (req, res) => {
-    Mentee.findById(req.user._id, (err, docu) => {
-        if (err) {
-            res.json({
-                message: "Error Encountered"
-            })
-        } else {
-            res.json({
-                notif: docu.notifications
-            })
-        }
-    })
+    try {
+        Mentee.findById(req.user._id, (err, docu) => {
+            if (err) {
+                res.json({
+                    message: "Error Encountered"
+                })
+            } else {
+                res.json({
+                    notif: docu.notifications
+                })
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
 })
 
 router.get("/mentee/create-notifications", authentication, (req, res) => {
-    Mentee.findById(req.user._id, (err, docu) => {
-        if (err) {
-            res.json({
-                message: "error"
-            })
-        } else {
-            var arr = docu.notifications
-            arr.push({
-                title: "hero",
-                description: "Testing",
-                button: "Cool"
-            })
-            Mentee.findByIdAndUpdate(req.user._id, {
-                notifications: arr
-            }, (err, call) => {
-                if (err) {
-                    res.json({
-                        message: "update error"
-                    })
-                } else {
-                    res.json({
-                        message: 'success'
-                    })
-                }
-            })
-
-        }
-    })
-})
-
-router.post("/mentee/dashhboard/notifications/delete-one", authentication, (req, res) => {
-    Mentee.findById(req.user._id, (err, docu) => {
-        if (err) {
-            res.json({
-                message: "failed"
-            })
-        } else {
-            docu.notifications.id(req.body.notificationid).remove()
-        }
-        docu.save((err) => {
-            if (err) {
-                res.json({
-                    message: "save error"
-                })
-            } else {
-                res.json({
-                    message: "success"
-                })
-            }
-        })
-    })
-})
-
-router.post("/mentee/dashhboard/notifications/mark-as-read", (req, res) => {
-    Mentee.findById(req.user._id, (err, docu) => {
-        if (err) {
-            res.json({
-                message: "failed"
-            })
-        } else {
-            docu.notifications.id(req.body.notificationid).read = true
-        }
-        docu.save((err) => {
-            if (err) {
-                res.json({
-                    message: "save error"
-                })
-            } else {
-                res.json({
-                    message: "success"
-                })
-            }
-        })
-    })
-})
-
-router.post("/mentee/submit-feedback", authentication, (req, res) => {
-    Feedback.create(req.body.feedback, (err, dat) => {
-        if (err) {
-            res.json({
-                result: "error",
-                error: err
-            })
-        } else {
-            res.json({
-                result: "success"
-            })
-        }
-    })
-})
-
-router.post("/mentee/account/change-password", authentication, (req, res) => {
-    if (req.body.oldPassword != undefined & req.body.newPassword != undefined) {
-        Mentee.findById(req.user._id, (err, ment) => {
+    try {
+        Mentee.findById(req.user._id, (err, docu) => {
             if (err) {
                 res.json({
                     message: "error"
                 })
             } else {
-                try {
-                    ment.changePassword(req.body.oldPassword, req.body.newPassword, (erro) => {
-                        if (erro.name == 'IncorrectPasswordError') {
-                            res.json({
-                                result: "error",
-                                erro
-                            })
-                        } else {
-                            ment.save()
-                            res.json({
-                                result: "success"
-                            })
-                        }
-                    })
-                } catch (error) {
-                    res.json({
-                        result: "error in changePassowrd",
-                        error
-                    })
-                }
+                var arr = docu.notifications
+                arr.push({
+                    title: "hero",
+                    description: "Testing",
+                    button: "Cool"
+                })
+                Mentee.findByIdAndUpdate(req.user._id, {
+                    notifications: arr
+                }, (err, call) => {
+                    if (err) {
+                        res.json({
+                            message: "update error"
+                        })
+                    } else {
+                        res.json({
+                            message: 'success'
+                        })
+                    }
+                })
+
             }
         })
-    } else {
+    } catch (error) {
         res.json({
-            result: "incomplete form"
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post("/mentee/dashhboard/notifications/delete-one", authentication, (req, res) => {
+    try {
+        Mentee.findById(req.user._id, (err, docu) => {
+            if (err) {
+                res.json({
+                    message: "failed"
+                })
+            } else {
+                docu.notifications.id(req.body.notificationid).remove()
+            }
+            docu.save((err) => {
+                if (err) {
+                    res.json({
+                        message: "save error"
+                    })
+                } else {
+                    res.json({
+                        message: "success"
+                    })
+                }
+            })
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post("/mentee/dashhboard/notifications/mark-as-read", authentication, (req, res) => {
+    try {
+        Mentee.findById(req.user._id, (err, docu) => {
+            if (err) {
+                res.json({
+                    message: "failed"
+                })
+            } else {
+                docu.notifications.id(req.body.notificationid).read = true
+            }
+            docu.save((err) => {
+                if (err) {
+                    res.json({
+                        message: "save error"
+                    })
+                } else {
+                    res.json({
+                        message: "success"
+                    })
+                }
+            })
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post("/mentee/submit-feedback", authentication, (req, res) => {
+    try {
+        Feedback.create(req.body.feedback, (err, dat) => {
+            if (err) {
+                res.json({
+                    result: "error",
+                    error: err
+                })
+            } else {
+                res.json({
+                    result: "success"
+                })
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post("/mentee/account/change-password", authentication, (req, res) => {
+    try {
+        if (req.body.oldPassword != undefined & req.body.newPassword != undefined) {
+            Mentee.findById(req.user._id, (err, ment) => {
+                if (err) {
+                    res.json({
+                        message: "error"
+                    })
+                } else {
+                    try {
+                        ment.changePassword(req.body.oldPassword, req.body.newPassword, (erro) => {
+                            if (erro.name == 'IncorrectPasswordError') {
+                                res.json({
+                                    result: "error",
+                                    erro
+                                })
+                            } else {
+                                ment.save()
+                                res.json({
+                                    result: "success"
+                                })
+                            }
+                        })
+                    } catch (error) {
+                        res.json({
+                            result: "error in changePassowrd",
+                            error
+                        })
+                    }
+                }
+            })
+        } else {
+            res.json({
+                result: "incomplete form"
+            })
+        }
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
         })
     }
 })
 
 router.post("/mentee/dashboard/material-request", authentication, (req, res) => {
-    Request.create({
-        material: req.body.material,
-        menteeID: req.user._id,
-    }, (err, dat)=>{
-        if (err) {
-            res.json({
-                result: "error",
-                err
-            })
-        } else {
-            Mentee.findById(req.user._id, (erro, doc)=> {
-                if (erro) {
+    try {
+        if (req.body.material!=undefined) {
+        var requests = req.body.material
+        var past = []
+        var select = true
+        Mentee.findById(req.user._id, (error, ment) => {
+            if (!error) {
+                past = ment.requests
+                requests.forEach( element => {
+                    if (ment.materialAccess.indexOf(element)==-1) {
+                     Request.create({
+                        menteeID: req.user._id,
+                        material: element,
+                    }, (err, doc) => {
+                        if (err) {
+                            select = false
+                        } else {
+                            past.push(doc._id)
+                        }
+                    })
+                }
+                })
+            } else {
+                select = false
+            }
+        })
+        if (select) {
+            Mentee.findByIdAndUpdate(req.user._id, {requests : past}, (err, ndoc)=>{
+                if (err) {
                     res.json({
-                        result: "error",
-                        erro
+                        result: "error"
                     })
                 } else {
-                    doc.requests.push(dat._id);
-                    doc.save()
                     res.json({
-                        result: "success",
-                        dat
+                        result: "success"
                     })
                 }
             })
+        } else {
+            res.json({
+                result: "error"
+            })
+        }
+    } else {
+        res.json({
+            result: "form incomplete"
+        })
+    }
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.get("/mentee/dashboard/past-material-requests", authentication, (req, res)=>{
+    try {
+    Mentee.findById(req.user._id, (err, doc)=>{
+        if (err) 
+        {
+            res.json({
+                result: "error"
+            })
+        } else {
+            var prev = doc.requests
+            var detArr = []
+            prev.forEach(element => {
+                Request.findById(element, (error, det)=>{
+                    detArr.push(det);
+                })
+            })
+            res.json({
+                pastrequest: detArr,
+            })
         }
     })
+} catch (error) {
+    res.json({
+        result: "unexpected error",
+        error
+    })
+}
+})
+
+router.post("/mentee/helpdesk/new-ticket", authentication, (req, res) => {
+    try {
+        if (req.body.subject != null && req.body.description != null && req.user != null) {
+            Help.create({
+                menteeID: req.user._id,
+                subject: req.body.subject,
+                description: req.body.description,
+            }, (err, doc) => {
+                if (err) {
+                    res.json({
+                        result: "error"
+                    })
+                } else {
+                    Mentee.findById(req.user._id, (erro, ment) => {
+                        if (erro) {
+                            res.json({
+                                result: "error",
+                                erro
+                            })
+                        } else {
+                            ment.tickets.push(doc._id)
+                            ment.save((error) => {
+                                if (error) {
+                                    res.json({
+                                        result: "error",
+                                        error
+                                    })
+                                } else {
+                                    res.json({
+                                        result: "success"
+                                    })
+                                }
+                            })
+                        }
+                    })
+                }
+            })
+        } else {
+            res.json({
+                result: "form incomplete"
+            })
+        }
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.get("/mentee/helpdesk/past-tickets", authentication, (req, res) => {
+    try {
+        Mentee.findById(req.user._id, (error, doc) => {
+            if (error) {
+                res.json({
+                    result: "error",
+                    error
+                })
+            } else {
+                var helpIDs = doc.tickets
+                var helpArr = []
+                var selection = true
+                helpIDs.forEach(async element => {
+                    await Help.findById(element, (err, det) => {
+                        if (err) {
+                            selection = false
+                            return;
+                        } else {
+                            console.log(det);
+                            helpArr.push(det)
+                        }
+                    })
+                });
+                if (selection) {
+                    console.log(helpArr)
+                    res.json({
+                        pasttickets: helpArr,
+                        result: "success"
+                    })
+                } else {
+                    res.json({
+                        result: "error",
+                        err
+                    })
+                }
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post("/mentee/library/get-access-token", authentication, (req, res) => {
+    try {
+        var mat = req.body.material
+        var chk = req.user.materialAccess.indexOf(mat)
+        if (chk != -1) {
+            jwt.sign({
+                user: req.user._id,
+                access: mat
+            }, secret, {
+                expiresIn: '1hr'
+            }, (error, tok) => {
+                if (error) {
+                    res.json({
+                        result: "error",
+                        error
+                    })
+                } else {
+                    res.json({
+                        result: "success",
+                        token: tok
+                    })
+                }
+            })
+        } else {
+            res.json({
+                result: "forbidden"
+            })
+        }
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.get("/mentee/library/material/view/:ver", authentication, (req, res) => {
+    try {
+        jwt.verify(req.params.ver, secret, (err, authData) => {
+            if (err) {
+                res.json({
+                    result: "error",
+                    err
+                })
+            } else {
+                var chk = req.user.materialAccess.indexOf(authData.access)
+                if (chk != -1) {
+                    res.json({
+                        result: "success",
+                        material: authData.access
+                    })
+                } else {
+                    res.json({
+                        result: "forbidden",
+                    })
+                }
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post("/mentee/approve/request", authentication, (req, res) => {
+    try {
+        Mentee.findById(req.user._id, (error, doc) => {
+            if (error) {
+                res.json({
+                    result: "error",
+                })
+            } else {
+                doc.materialAccess.push(req.body.approve)
+                doc.save((err) => {
+                    if (err) {
+                        res.json({
+                            result: "error"
+                        })
+                    } else {
+                        res.json({
+                            result: "success"
+                        })
+                    }
+                })
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.get("/mentee/account/payment-history", authentication, (req, res) => {
+    try {
+        Mentee.findById(req.user._id, (error, doc) => {
+            if (error) {
+                res.json({
+                    result: "error",
+                    error
+                })
+            } else {
+                var paymentIDs = doc.payments==undefined ? doc.payments : [] ;
+                var paymentArr = []
+                var selection = true
+                paymentIDs.forEach(element => {
+                    Help.findById(element, (err, det) => {
+                        if (err) {
+                            selection = false
+                            return;
+                        } else {
+                            paymentArr.push(det)
+                        }
+                    })
+                });
+                if (selection) {
+                    res.json({
+                        payments: paymentArr,
+                        result: "success"
+                    })
+                } else {
+                    res.json({
+                        result: "error",
+                        err
+                    })
+                }
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
 })
 
 function authentication(req, res, next) {

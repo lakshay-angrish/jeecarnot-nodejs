@@ -67,6 +67,11 @@ var MenteeSchema = mongoose.Schema({
         type: String,
         default: 'english'
     },
+    materialRequirement: {
+        type: String,
+        default:""
+    },
+    materialAccess: [String],
     plan: {
         type: String,
         default: 'none'
@@ -77,11 +82,13 @@ var MenteeSchema = mongoose.Schema({
     },
     notifications: [Notifications],
     requests: [String],
+    tickets: [String],
+    payments: [String],
     mentorID: {
         type: String,
         default: "None"
     }
-})
+}, {timestamps: true})
 
 MenteeSchema.plugin(passportLocalMongoose, {
     usernameField: 'email'
