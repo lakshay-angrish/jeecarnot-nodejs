@@ -732,74 +732,42 @@ router.post("/mentee/account/change-password", authentication, (req, res) => {
     }
 })
 
-router.post("/mentee/dashboard/material-request", authentication, (req, res) => {
+router.post("/mentee/dashboard/material-request", authentication, async (req, res) => {
     try {
-        if (req.body.material != undefined) {
+        if (!req.body.material) 
+            return res.json({result: "form incomplete"})
             var requests = req.body.material
             var past = []
-            var select = true
-            Mentee.findById(req.user._id, (error, ment) => {
-                if (!error) {
-                    requests.forEach(element => {
-                        if (ment.materialAccess.indexOf(element) == -1) {
-                            Request.create({
-                                menteeID: req.user._id,
-                                material: element,
-                            }, (err, doc) => {
-                                if (err) {
-                                    select = false
-                                } else {
-                                    ment.requests.push(doc._id)
-                                    ment.save()
-                                }
-                            })
-                        }
+            let ment= await Mentee.findById(req.user._id);
+            for (let request of requests){
+                if (ment.materialAccess.indexOf(request) == -1) {
+                    let doc=await Request.create({
+                        menteeID: req.user._id,
+                        material: request,
                     })
-                } else {
-                    select = false
+                    await ment.update({ $push: { requests: doc._id }}
+                    )
                 }
-            })
-            if (select) {
-                    res.json({
-                        result: "success"
-                    })
-            } else {
-                res.json({
-                    result: "error"
-                })
             }
-        } else {
-            res.json({
-                result: "form incomplete"
-            })
-        }
+            return res.json({result: "success"})
     } catch (error) {
-        res.json({
+        return res.json({
             result: "unexpected error",
             error
         })
     }
 })
 
-router.get("/mentee/dashboard/past-material-requests", authentication, (req, res) => {
+router.get("/mentee/dashboard/past-material-requests", authentication, async (req, res) => {
     try {
-        Mentee.findById(req.user._id, (err, doc) => {
-            if (err) {
-                res.json({
-                    result: "error"
-                })
-            } else {
-                var prev = doc.requests
-                var detArr = []
-                prev.forEach(element => {
-                    Request.findById(element, (error, det) => {
-                        detArr.push(det);
-                    })
-                })
-                res.json({
-                    pastrequest: detArr,
-                })
-            }
+        let detArr=[]
+        let ment= await Mentee.findById(req.user._id);
+        let prev = ment.requests
+        for (let request of prev){
+            detArr.push(await Request.findById(request));
+        }
+        return res.json({
+            pastrequest: detArr,
         })
     } catch (error) {
         res.json({
