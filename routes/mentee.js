@@ -94,9 +94,9 @@ router.post('/mentee/register/api/send-otp', formFill, async (req, res) => {
 
 router.post('/mentee/register', formFill, async (req, res) => {
     try {
-        //const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
-        //if (response.type == 'success') {
-        if (true) { // for testing purposes use this if loop.
+        const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
+        if (response.type == 'success') {
+        //if (true) { // for testing purposes use this if loop.
             console.log(req.body.email)
             Mentee.register(new Mentee({
                     name: req.body.name,
@@ -196,15 +196,15 @@ router.get('/mentee/register', (req, res) => {
 
 router.get('/mentee/login', (req, res, next) => {
 
-        if (req.isAuthenticated()) {
-            console.log('user aldready authenticated')
-            res.redirect('/mentee/home')
-        } else {
-            return next()
-        }
-    }, (req, res) => {
-        res.render('login') // this is the login page
-    
+    if (req.isAuthenticated()) {
+        console.log('user aldready authenticated')
+        res.redirect('/mentee/home')
+    } else {
+        return next()
+    }
+}, (req, res) => {
+    res.render('login') // this is the login page
+
 })
 
 router.put('/mentee/profile-complete', authentication, (req, res) => {
@@ -734,53 +734,45 @@ router.post("/mentee/account/change-password", authentication, (req, res) => {
 
 router.post("/mentee/dashboard/material-request", authentication, (req, res) => {
     try {
-        if (req.body.material!=undefined) {
-        var requests = req.body.material
-        var past = []
-        var select = true
-        Mentee.findById(req.user._id, (error, ment) => {
-            if (!error) {
-                past = ment.requests
-                requests.forEach( element => {
-                    if (ment.materialAccess.indexOf(element)==-1) {
-                     Request.create({
-                        menteeID: req.user._id,
-                        material: element,
-                    }, (err, doc) => {
-                        if (err) {
-                            select = false
-                        } else {
-                            past.push(doc._id)
+        if (req.body.material != undefined) {
+            var requests = req.body.material
+            var past = []
+            var select = true
+            Mentee.findById(req.user._id, (error, ment) => {
+                if (!error) {
+                    requests.forEach(element => {
+                        if (ment.materialAccess.indexOf(element) == -1) {
+                            Request.create({
+                                menteeID: req.user._id,
+                                material: element,
+                            }, (err, doc) => {
+                                if (err) {
+                                    select = false
+                                } else {
+                                    ment.requests.push(doc._id)
+                                    ment.save()
+                                }
+                            })
                         }
                     })
-                }
-                })
-            } else {
-                select = false
-            }
-        })
-        if (select) {
-            Mentee.findByIdAndUpdate(req.user._id, {requests : past}, (err, ndoc)=>{
-                if (err) {
-                    res.json({
-                        result: "error"
-                    })
                 } else {
+                    select = false
+                }
+            })
+            if (select) {
                     res.json({
                         result: "success"
                     })
-                }
-            })
+            } else {
+                res.json({
+                    result: "error"
+                })
+            }
         } else {
             res.json({
-                result: "error"
+                result: "form incomplete"
             })
         }
-    } else {
-        res.json({
-            result: "form incomplete"
-        })
-    }
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -789,33 +781,32 @@ router.post("/mentee/dashboard/material-request", authentication, (req, res) => 
     }
 })
 
-router.get("/mentee/dashboard/past-material-requests", authentication, (req, res)=>{
+router.get("/mentee/dashboard/past-material-requests", authentication, (req, res) => {
     try {
-    Mentee.findById(req.user._id, (err, doc)=>{
-        if (err) 
-        {
-            res.json({
-                result: "error"
-            })
-        } else {
-            var prev = doc.requests
-            var detArr = []
-            prev.forEach(element => {
-                Request.findById(element, (error, det)=>{
-                    detArr.push(det);
+        Mentee.findById(req.user._id, (err, doc) => {
+            if (err) {
+                res.json({
+                    result: "error"
                 })
-            })
-            res.json({
-                pastrequest: detArr,
-            })
-        }
-    })
-} catch (error) {
-    res.json({
-        result: "unexpected error",
-        error
-    })
-}
+            } else {
+                var prev = doc.requests
+                var detArr = []
+                prev.forEach(element => {
+                    Request.findById(element, (error, det) => {
+                        detArr.push(det);
+                    })
+                })
+                res.json({
+                    pastrequest: detArr,
+                })
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
 })
 
 router.post("/mentee/helpdesk/new-ticket", authentication, (req, res) => {
@@ -1018,7 +1009,7 @@ router.get("/mentee/account/payment-history", authentication, (req, res) => {
                     error
                 })
             } else {
-                var paymentIDs = doc.payments==undefined ? doc.payments : [] ;
+                var paymentIDs = doc.payments == undefined ? doc.payments : [];
                 var paymentArr = []
                 var selection = true
                 paymentIDs.forEach(element => {
@@ -1051,6 +1042,8 @@ router.get("/mentee/account/payment-history", authentication, (req, res) => {
         })
     }
 })
+
+
 
 function authentication(req, res, next) {
     //console.log('status of authentication is '+req.isAuthenticated)
