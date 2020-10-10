@@ -7,7 +7,8 @@ test.http
 ./test.http
 
 logs/access.log
-
+/logs/*
+./logs/*
 public/test/*
 .env
 .env

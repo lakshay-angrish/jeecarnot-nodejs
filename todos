@@ -55,3 +55,17 @@ material requests api (workflow)
 	when his mentor views his requests, he can see all requests from mentee and select few or all and approve them. status will be updated in collection as well as in mentees profile
 
 	finally when admin sees the requests and approves or declines, the status will be updated in mentees profile and the request will bee deleted from collection as there is no point of storing completed requests in database
+
+CHANGE IN MATERIAL FLOW
+-fetch pending requests
+-fetch completed requests
+
+in mentee sccheme there will be an field completedMatReq
+
+when the admin/mentor approve/reject a request then the request will be removed from the requests collection and also from the mentee schema:requests and the whole request document will be moved into mentee:completedMatReq
+
+SAME with tickets
+
+TODO
+change payment api
+approve/reject material request api is admin side api
