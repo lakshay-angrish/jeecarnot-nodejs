@@ -6,7 +6,6 @@ const {
 const express = require('express')
 require('dotenv').config()
 const router = require('express').Router()
-var mongoose = require("mongoose")
 var bodyparser = require("body-parser")
 const msg91OTP = require('msg91-lib').msg91OTP;
 const jwt = require('jsonwebtoken');
@@ -34,7 +33,6 @@ var Request = require("../models/requestModel")
 var Help = require("../models/helpModel")
 var Payment = require("../models/paymentModel")
 var mongoose = require('mongoose');
-var Notifications = require("../models/notificationModel.js")
 const {
     assert
 } = require('console');
@@ -790,15 +788,24 @@ router.get("/mentee/dashboard/past-material-requests", authentication, (req, res
                 })
             } else {
                 var prev = doc.requests
+                var len = prev.length
                 var detArr = []
-                prev.forEach(element => {
-                    Request.findById(element, (error, det) => {
-                        detArr.push(det);
+                if (len-1 >=0) {
+                    prev.forEach(element => {
+                        Request.findById(element, (error, det) => {
+                            detArr.push(det);
+                            if (element==prev[len-1]) {
+                                res.json({
+                                    pastrequest: detArr,
+                                })
+                            }
+                        })
                     })
-                })
-                res.json({
-                    pastrequest: detArr,
-                })
+                } else {
+                    res.json({
+                        pastrequest: []
+                    })
+                }
             }
         })
     } catch (error) {
@@ -870,28 +877,34 @@ router.get("/mentee/helpdesk/past-tickets", authentication, (req, res) => {
             } else {
                 var helpIDs = doc.tickets
                 var helpArr = []
+                var len = helpIDs.length
                 var selection = true
-                helpIDs.forEach(async element => {
-                    await Help.findById(element, (err, det) => {
-                        if (err) {
-                            selection = false
-                            return;
-                        } else {
-                            console.log(det);
-                            helpArr.push(det)
-                        }
-                    })
-                });
-                if (selection) {
-                    console.log(helpArr)
-                    res.json({
-                        pasttickets: helpArr,
-                        result: "success"
-                    })
+                if (len-1>=0) {
+                    helpIDs.forEach(async element => {
+                        Help.findById(element, (err, det) => {
+                            if (err) {
+                                selection = false
+                            } else {
+                                helpArr.push(det)
+                            }
+                            if (element==helpIDs[len-1]) {
+                                if (selection) {
+                                    res.json({
+                                        pasttickets: helpArr,
+                                        result: "success"
+                                    })
+                                } else {
+                                    res.json({
+                                        result: "error",
+                                        err
+                                    })
+                                }
+                            }
+                        })
+                    });
                 } else {
                     res.json({
-                        result: "error",
-                        err
+                        pasttickets: []
                     })
                 }
             }
@@ -1009,28 +1022,37 @@ router.get("/mentee/account/payment-history", authentication, (req, res) => {
                     error
                 })
             } else {
-                var paymentIDs = doc.payments == undefined ? doc.payments : [];
+                var paymentIDs = doc.payments
                 var paymentArr = []
+                var len = paymentIDs.length
                 var selection = true
-                paymentIDs.forEach(element => {
-                    Help.findById(element, (err, det) => {
-                        if (err) {
-                            selection = false
-                            return;
-                        } else {
-                            paymentArr.push(det)
-                        }
-                    })
-                });
-                if (selection) {
-                    res.json({
-                        payments: paymentArr,
-                        result: "success"
-                    })
+                if (len-1>=0) {
+                    paymentIDs.forEach(element => {
+                        Help.findById(element, (err, det) => {
+                            if (err) {
+                                selection = false
+                                return;
+                            } else {
+                                paymentArr.push(det)
+                            }
+                            if (element==paymentIDs[len-1]) {
+                                if (selection) {
+                                    res.json({
+                                        payments: paymentArr,
+                                        result: "success"
+                                    })
+                                } else {
+                                    res.json({
+                                        result: "error",
+                                        err
+                                    })
+                                }
+                            }
+                        })
+                    });
                 } else {
                     res.json({
-                        result: "error",
-                        err
+                        payments: []
                     })
                 }
             }

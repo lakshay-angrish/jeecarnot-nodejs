@@ -16,5 +16,5 @@ var helpSchema = mongoose.Schema({
         type: String,
         default: "pending"
     }
-})
+}, {timestamps: true})
 module.exports = mongoose.model("Help", helpSchema)
