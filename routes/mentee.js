@@ -21,8 +21,6 @@ const mg = mailgun({
     domain: DOMAIN
 });
 var senderEmail = 'JEECarnot <no-reply-test@carnot-test.com>'
-var request = require('request')
-var http = require('https')
 var passport = require("passport")
 var localStrategy = require('passport-local')
 var localMongooseStrategy = require('passport-local-mongoose')
@@ -31,7 +29,6 @@ var Mentor = require("../models/mentorModel")
 var Feedback = require("../models/feedbackModel")
 var Request = require("../models/requestModel")
 var Help = require("../models/helpModel")
-var Payment = require("../models/paymentModel")
 var mongoose = require('mongoose');
 const {
     assert
@@ -121,7 +118,7 @@ router.post('/mentee/register', formFill, async (req, res) => {
                             user
                         }, secret, {
                             expiresIn: '24h'
-                        }, (err, token) => {
+                        }, async (err, token) => {
                             console.log('entered jwt loop')
                             if (err) {
                                 console.log('encountered error')
@@ -135,7 +132,7 @@ router.post('/mentee/register', formFill, async (req, res) => {
                                     subject: 'Verify your Email',
                                     html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href=' + link + '>Verify Your Email</a>'
                                 }
-                                mg.messages().send(emailData, function (error, body) {
+                                var sentEmail = await mg.messages().send(emailData, function (error, body) {
                                     if (error) {
                                         console.log(error)
                                     } else {
@@ -205,11 +202,11 @@ router.get('/mentee/login', (req, res, next) => {
 
 })
 
-router.put('/mentee/profile-complete', authentication, (req, res) => {
+router.put('/mentee/profile-complete', authentication,async (req, res) => {
     try {
         req.body.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
         req.body.planID = ""
-        Mentee.findByIdAndUpdate(req.user._id, req.body, (err, updated) => {
+        var updateQuery = await Mentee.findByIdAndUpdate(req.user._id, req.body, (err, updated) => {
             if (err) {
                 res.json({
                     result: 'failure',
@@ -279,10 +276,10 @@ router.post('/mentee/login', (req, res, next) => {
     })(req, res, next)
 })
 
-router.post('/mentee/phonelogin', (req, res, next) => {
+router.post('/mentee/phonelogin', async (req, res, next) => {
     try {
         if (req.body.phone != undefined && req.body.password != undefined) {
-            Mentee.findOne({
+            var findQuery = await Mentee.findOne({
                 phone: req.body.phone
             }, (err, ment) => {
                 if (err) {
@@ -358,7 +355,6 @@ router.post('/mentee/otplogin', async (req, res) => {
                     err: 'failedVerification'
                 })
             }
-
         } else {
             res.send('form incomplete')
         }
@@ -374,7 +370,7 @@ router.post("/mentee/login/api/send-otp", async (req, res) => {
     try {
         if (req.body.phone != undefined && req.body.phone.length == 10) {
             var response;
-            Mentee.findOne({
+            var findQuery = await Mentee.findOne({
                 phone: req.body.phone
             }, async (err, res) => {
                 if (err) {
@@ -468,13 +464,13 @@ router.get('/mentee/home', authentication, (req, res) => {
     }
 })
 
-router.get('/mentee/email/:ver', (req, res) => {
+router.get('/mentee/email/:ver', async (req, res) => {
     try {
-        jwt.verify(req.params.ver, secret, (err, authData) => {
+        jwt.verify(req.params.ver, secret, async (err, authData) => {
             if (err) {
                 res.send("Unable to verify try again")
             } else {
-                Mentee.findByIdAndUpdate(authData.user.id, {
+                var updateQuery = await Mentee.findByIdAndUpdate(authData.user.id, {
                     emailVerification: true
                 }, (err, updated) => {
                     if (err) {
@@ -545,9 +541,42 @@ router.post("/mentee/profile/is-profile-complete", authentication, (req, res) =>
     }
 })
 
-router.get("/mentee/dashboard/notifications/fetch-all", authentication, (req, res) => {
+router.get("/mentee/dashboard/my-mentor-details", authentication, async (req, res)=>{
+    var findQuery = await Mentee.findById(req.user._id, async (err, doc)=> {
+        if (err) {
+            res.json({
+                result : "error",
+                err
+            })
+        } else {
+            if (doc.mentorID != "none") {
+                var mentorFind = await Mentor.findById(doc.mentorID, (error, mentor)=> {
+                    if (error) {
+                        res.json({
+                            result : "error",
+                            error
+                        })
+                    } else {
+                        res.json({
+                            mentorName: mentor.name,
+                            mentorPhone: mentor.phone,
+                            mentorEmail: mentor.email,
+                            mentorId: mentor._id,
+                        })
+                    }
+                })
+            } else {
+                res.json({
+                    result: "no mentor"
+                })
+            }
+        }
+    })
+})
+
+router.get("/mentee/dashboard/notifications/fetch-all", authentication, async (req, res) => {
     try {
-        Mentee.findById(req.user._id, (err, docu) => {
+        var findQuery =await Mentee.findById(req.user._id, (err, docu) => {
             if (err) {
                 res.json({
                     message: "Error Encountered"
@@ -566,9 +595,9 @@ router.get("/mentee/dashboard/notifications/fetch-all", authentication, (req, re
     }
 })
 
-router.get("/mentee/create-notifications", authentication, (req, res) => {
+router.get("/mentee/create-notifications", authentication,async (req, res) => {
     try {
-        Mentee.findById(req.user._id, (err, docu) => {
+        var findQuery = await Mentee.findById(req.user._id, async (err, docu) => {
             if (err) {
                 res.json({
                     message: "error"
@@ -580,7 +609,7 @@ router.get("/mentee/create-notifications", authentication, (req, res) => {
                     description: "Testing",
                     button: "Cool"
                 })
-                Mentee.findByIdAndUpdate(req.user._id, {
+                var updateQuery = await Mentee.findByIdAndUpdate(req.user._id, {
                     notifications: arr
                 }, (err, call) => {
                     if (err) {
@@ -604,9 +633,9 @@ router.get("/mentee/create-notifications", authentication, (req, res) => {
     }
 })
 
-router.post("/mentee/dashhboard/notifications/delete-one", authentication, (req, res) => {
+router.post("/mentee/dashhboard/notifications/delete-one", authentication,async (req, res) => {
     try {
-        Mentee.findById(req.user._id, (err, docu) => {
+        var findQuery = await Mentee.findById(req.user._id, async (err, docu) => {
             if (err) {
                 res.json({
                     message: "failed"
@@ -614,7 +643,7 @@ router.post("/mentee/dashhboard/notifications/delete-one", authentication, (req,
             } else {
                 docu.notifications.id(req.body.notificationid).remove()
             }
-            docu.save((err) => {
+            var saver = await docu.save((err) => {
                 if (err) {
                     res.json({
                         message: "save error"
@@ -634,9 +663,9 @@ router.post("/mentee/dashhboard/notifications/delete-one", authentication, (req,
     }
 })
 
-router.post("/mentee/dashhboard/notifications/mark-as-read", authentication, (req, res) => {
+router.post("/mentee/dashhboard/notifications/mark-as-read", authentication,async (req, res) => {
     try {
-        Mentee.findById(req.user._id, (err, docu) => {
+        var findQuery = await Mentee.findById(req.user._id, async (err, docu) => {
             if (err) {
                 res.json({
                     message: "failed"
@@ -644,7 +673,7 @@ router.post("/mentee/dashhboard/notifications/mark-as-read", authentication, (re
             } else {
                 docu.notifications.id(req.body.notificationid).read = true
             }
-            docu.save((err) => {
+            var saver = await docu.save((err) => {
                 if (err) {
                     res.json({
                         message: "save error"
@@ -664,9 +693,9 @@ router.post("/mentee/dashhboard/notifications/mark-as-read", authentication, (re
     }
 })
 
-router.post("/mentee/submit-feedback", authentication, (req, res) => {
+router.post("/mentee/submit-feedback", authentication,async (req, res) => {
     try {
-        Feedback.create(req.body.feedback, (err, dat) => {
+        var feddbackCreate = await Feedback.create(req.body.feedback, (err, dat) => {
             if (err) {
                 res.json({
                     result: "error",
@@ -686,10 +715,10 @@ router.post("/mentee/submit-feedback", authentication, (req, res) => {
     }
 })
 
-router.post("/mentee/account/change-password", authentication, (req, res) => {
+router.post("/mentee/account/change-password", authentication,async (req, res) => {
     try {
         if (req.body.oldPassword != undefined & req.body.newPassword != undefined) {
-            Mentee.findById(req.user._id, (err, ment) => {
+            var findQuery = await Mentee.findById(req.user._id, (err, ment) => {
                 if (err) {
                     res.json({
                         message: "error"
@@ -730,25 +759,25 @@ router.post("/mentee/account/change-password", authentication, (req, res) => {
     }
 })
 
-router.post("/mentee/dashboard/material-request", authentication, (req, res) => {
+router.post("/mentee/dashboard/material-request", authentication, async (req, res) => {
     try {
         if (req.body.material != undefined) {
             var requests = req.body.material
             var past = []
             var select = true
-            Mentee.findById(req.user._id, (error, ment) => {
+            var findQuery = await Mentee.findById(req.user._id,async (error, ment) => {
                 if (!error) {
-                    requests.forEach(element => {
+                    requests.forEach(async element => {
                         if (ment.materialAccess.indexOf(element) == -1) {
-                            Request.create({
+                            var reqCreate = await Request.create({
                                 menteeID: req.user._id,
                                 material: element,
-                            }, (err, doc) => {
+                            }, async (err, doc) => {
                                 if (err) {
                                     select = false
                                 } else {
                                     ment.requests.push(doc._id)
-                                    ment.save()
+                                    var saver = await ment.save()
                                 }
                             })
                         }
@@ -779,9 +808,9 @@ router.post("/mentee/dashboard/material-request", authentication, (req, res) => 
     }
 })
 
-router.get("/mentee/dashboard/past-material-requests", authentication, (req, res) => {
+router.get("/mentee/dashboard/past-material-requests", authentication,async (req, res) => {
     try {
-        Mentee.findById(req.user._id, (err, doc) => {
+        var findQuery = await Mentee.findById(req.user._id, (err, doc) => {
             if (err) {
                 res.json({
                     result: "error"
@@ -791,8 +820,8 @@ router.get("/mentee/dashboard/past-material-requests", authentication, (req, res
                 var len = prev.length
                 var detArr = []
                 if (len-1 >=0) {
-                    prev.forEach(element => {
-                        Request.findById(element, (error, det) => {
+                    prev.forEach(async element => {
+                        var reqFind = await Request.findById(element, (error, det) => {
                             detArr.push(det);
                             if (element==prev[len-1]) {
                                 res.json({
@@ -816,20 +845,20 @@ router.get("/mentee/dashboard/past-material-requests", authentication, (req, res
     }
 })
 
-router.post("/mentee/helpdesk/new-ticket", authentication, (req, res) => {
+router.post("/mentee/helpdesk/new-ticket", authentication,async (req, res) => {
     try {
         if (req.body.subject != null && req.body.description != null && req.user != null) {
-            Help.create({
+            var helpCreate = await Help.create({
                 menteeID: req.user._id,
                 subject: req.body.subject,
                 description: req.body.description,
-            }, (err, doc) => {
+            }, async (err, doc) => {
                 if (err) {
                     res.json({
                         result: "error"
                     })
                 } else {
-                    Mentee.findById(req.user._id, (erro, ment) => {
+                    var findQuery = await Mentee.findById(req.user._id,async (erro, ment) => {
                         if (erro) {
                             res.json({
                                 result: "error",
@@ -837,7 +866,7 @@ router.post("/mentee/helpdesk/new-ticket", authentication, (req, res) => {
                             })
                         } else {
                             ment.tickets.push(doc._id)
-                            ment.save((error) => {
+                            var saver = await ment.save((error) => {
                                 if (error) {
                                     res.json({
                                         result: "error",
@@ -866,9 +895,9 @@ router.post("/mentee/helpdesk/new-ticket", authentication, (req, res) => {
     }
 })
 
-router.get("/mentee/helpdesk/past-tickets", authentication, (req, res) => {
+router.get("/mentee/helpdesk/past-tickets", authentication,async (req, res) => {
     try {
-        Mentee.findById(req.user._id, (error, doc) => {
+        var findQuery = await Mentee.findById(req.user._id, (error, doc) => {
             if (error) {
                 res.json({
                     result: "error",
@@ -881,7 +910,7 @@ router.get("/mentee/helpdesk/past-tickets", authentication, (req, res) => {
                 var selection = true
                 if (len-1>=0) {
                     helpIDs.forEach(async element => {
-                        Help.findById(element, (err, det) => {
+                        var helpFind = await Help.findById(element, (err, det) => {
                             if (err) {
                                 selection = false
                             } else {
@@ -983,16 +1012,46 @@ router.get("/mentee/library/material/view/:ver", authentication, (req, res) => {
     }
 })
 
-router.post("/mentee/approve/request", authentication, (req, res) => {
+router.get("mentee/library/material/download/:ver", authentication, (req, res)=>{
     try {
-        Mentee.findById(req.user._id, (error, doc) => {
+        jwt.verify(req.params.ver, secret, (err, authData) => {
+            if (err) {
+                res.json({
+                    result: "error",
+                    err
+                })
+            } else {
+                var chk = req.user.materialAccess.indexOf(authData.access)
+                if (chk != -1) {
+                    res.json({
+                        result: "success",
+                        material: authData.access // TO BE CHANGED IN FUTURE
+                    })
+                } else {
+                    res.json({
+                        result: "forbidden",
+                    })
+                }
+            }
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post("/mentee/approve/request", authentication,async (req, res) => {
+    try {
+        var findQuery = await Mentee.findById(req.user._id, async (error, doc) => {
             if (error) {
                 res.json({
                     result: "error",
                 })
             } else {
                 doc.materialAccess.push(req.body.approve)
-                doc.save((err) => {
+                var saver = await doc.save((err) => {
                     if (err) {
                         res.json({
                             result: "error"
@@ -1013,9 +1072,9 @@ router.post("/mentee/approve/request", authentication, (req, res) => {
     }
 })
 
-router.get("/mentee/account/payment-history", authentication, (req, res) => {
+router.get("/mentee/account/payment-history", authentication,async (req, res) => {
     try {
-        Mentee.findById(req.user._id, (error, doc) => {
+        var findQuery = await Mentee.findById(req.user._id, (error, doc) => {
             if (error) {
                 res.json({
                     result: "error",
@@ -1027,8 +1086,8 @@ router.get("/mentee/account/payment-history", authentication, (req, res) => {
                 var len = paymentIDs.length
                 var selection = true
                 if (len-1>=0) {
-                    paymentIDs.forEach(element => {
-                        Help.findById(element, (err, det) => {
+                    paymentIDs.forEach(async element => {
+                        var helpFind = await Help.findById(element, (err, det) => {
                             if (err) {
                                 selection = false
                                 return;
@@ -1064,8 +1123,6 @@ router.get("/mentee/account/payment-history", authentication, (req, res) => {
         })
     }
 })
-
-
 
 function authentication(req, res, next) {
     //console.log('status of authentication is '+req.isAuthenticated)

@@ -86,7 +86,7 @@ var MenteeSchema = mongoose.Schema({
     payments: [String],
     mentorID: {
         type: String,
-        default: "None"
+        default: "none"
     }
 }, {timestamps: true})
 
