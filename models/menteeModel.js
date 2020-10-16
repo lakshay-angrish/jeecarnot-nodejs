@@ -71,7 +71,7 @@ var MenteeSchema = mongoose.Schema({
         type: String,
         default:""
     },
-    materialAccess: [String],
+    access: [String],
     plan: {
         type: String,
         default: 'none'
@@ -85,6 +85,10 @@ var MenteeSchema = mongoose.Schema({
     tickets: [String],
     payments: [String],
     mentorID: {
+        type: String,
+        default: "none"
+    },
+    mentorAssign :{
         type: String,
         default: "none"
     }

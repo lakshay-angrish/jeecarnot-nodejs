@@ -101,30 +101,21 @@ router.post('/mentee/register', formFill, async (req, res) => {
                 req.body.password,
                 function (err, newMentee) {
                     if (err) {
-                        console.log(err)
                         res.json({
                             type: 'failure',
                             err: 'errorRegistering'
                         })
                     } else {
-                        console.log(newMentee)
-                        console.log('redirecting to: ' + '/mentee/' + newMentee._id.toString() + '/profile-complete')
                         var user = {
                             email: newMentee.email,
                             id: newMentee._id
                         }
-                        console.log('now entering jwt loop')
                         jwt.sign({
                             user
                         }, secret, {
                             expiresIn: '24h'
                         }, async (err, token) => {
-                            console.log('entered jwt loop')
-                            if (err) {
-                                console.log('encountered error')
-                                console.log(err)
-                            } else {
-                                console.log('no error 1')
+                            if (!err) {
                                 var link = 'localhost:3333/mentee/email/' + token.toString()
                                 var emailData = {
                                     from: senderEmail,
@@ -132,13 +123,7 @@ router.post('/mentee/register', formFill, async (req, res) => {
                                     subject: 'Verify your Email',
                                     html: '<h1>Welcome to JEE CARNOT</h1><br><p>to verify your email pls click on link below</p><br><a href=' + link + '>Verify Your Email</a>'
                                 }
-                                var sentEmail = await mg.messages().send(emailData, function (error, body) {
-                                    if (error) {
-                                        console.log(error)
-                                    } else {
-                                        console.log(body)
-                                    }
-                                });
+                                var sentEmail = await mg.messages().send(emailData)
                             }
                         })
                         req.logIn(newMentee, (erri) => {
@@ -170,7 +155,8 @@ router.post('/mentee/register/api/resend-otp', formFill, async (req, res) => {
     try {
         const response = await msg91otp.retry("+91" + req.body.phone);
         res.json({
-            type: 'success'
+            type: 'success',
+            response
         })
     } catch (error) {
         console.log(error);
@@ -202,10 +188,11 @@ router.get('/mentee/login', (req, res, next) => {
 
 })
 
-router.put('/mentee/profile-complete', authentication,async (req, res) => {
+router.put('/mentee/profile-complete', authentication, async (req, res) => {
     try {
         req.body.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
         req.body.planID = ""
+        req.body.profileVerification = true
         var updateQuery = await Mentee.findByIdAndUpdate(req.user._id, req.body, (err, updated) => {
             if (err) {
                 res.json({
@@ -213,18 +200,8 @@ router.put('/mentee/profile-complete', authentication,async (req, res) => {
                     err: 'updateFailed'
                 })
             } else {
-                updated.profileVerification = true;
-                updated.save((err) => {
-                    if (err) {
-                        res.json({
-                            result: "failure",
-                            err: "updateFailed"
-                        })
-                    } else {
-                        res.json({
-                            result: 'success'
-                        })
-                    }
+                res.json({
+                    result: 'success'
                 })
             }
         })
@@ -278,26 +255,9 @@ router.post('/mentee/login', (req, res, next) => {
 
 router.post('/mentee/phonelogin', async (req, res, next) => {
     try {
-        if (req.body.phone != undefined && req.body.password != undefined) {
-            var findQuery = await Mentee.findOne({
-                phone: req.body.phone
-            }, (err, ment) => {
-                if (err) {
-                    res.json({
-                        type: 'failure',
-                        err: err
-                    })
-                } else if (ment) {
-                    req.body.email = ment.email
-                    return next()
-                }
-            })
-        } else {
-            res.json({
-                type: 'failure',
-                err: 'incomplete'
-            })
-        }
+        let ment = await Mentee.findOne({phone : req.body.phone})
+        req.body.email = ment.email
+        return next()
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -311,53 +271,17 @@ router.post('/mentee/phonelogin', async (req, res, next) => {
 
 router.post('/mentee/otplogin', async (req, res) => {
     try {
-        console.log(req.body.phone)
-        console.log(req.body.phone != undefined)
-        console.log(req.body.phone.length)
-        if (req.body.phone != undefined && req.body.phone.length == 10) {
-            var response;
-            try {
-                response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
-                if (response.type == 'success') {
-                    Mentee.findOne({
-                        phone: req.body.phone
-                    }, (err, user) => {
-                        console.log(user)
-                        console.log(err)
-                        if (err) {
-                            console.log(err)
-                            res.json({
-                                type: 'failure',
-                                err: err
-                            })
-                        } else if (user) {
-                            console.log(user)
-                            req.logIn(user, (erri) => {
-                                if (erri) {
-                                    console.log(erri)
-                                }
-                            })
-                            res.json({
-                                type: 'success'
-                            })
-                        } else {
-                            res.json({
-                                type: "failure",
-                                err: 'undefinedUser'
-                            })
-                        }
-                    })
-                }
-            } catch (error) {
-                console.log(error);
-                res.json({
-                    type: 'failure',
-                    err: 'failedVerification'
-                })
-            }
-        } else {
-            res.send('form incomplete')
+        let response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
+        if (response.type=="success") {
+            let ment = await Mentee.findOne({phone : req.body.phone})
+            req.logIn(ment)
+            return res.json({
+                result : "success"
+            })
         }
+        return res.json({
+            result : "failed verification"
+        })
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -368,49 +292,18 @@ router.post('/mentee/otplogin', async (req, res) => {
 
 router.post("/mentee/login/api/send-otp", async (req, res) => {
     try {
-        if (req.body.phone != undefined && req.body.phone.length == 10) {
-            var response;
-            var findQuery = await Mentee.findOne({
-                phone: req.body.phone
-            }, async (err, res) => {
-                if (err) {
-                    console.log(err);
-                    res.json({
-                        type: 'failure',
-                        err: err
-                    })
-                } else if (res == null) {
-                    res.json({
-                        type: 'failure',
-                        err: 'noNumberInData'
-                    })
-                } else {
-                    try {
-                        response = await msg91otp.send('+91' + req.body.phone, {
-                            otp_expiry: 10
-                        })
-                        if (response.type == 'success') {
-                            res.json({
-                                type: 'success',
-                                response
-                            })
-                        }
-                    } catch (e) {
-                        console.log(e)
-                        response = e
-                        res.json({
-                            type: 'failure',
-                            err: response
-                        })
-                    }
-                }
+        if (req.body.phone == undefined || req.body.phone.length != 10)
+            return res.json({
+                result: "form incomplete"
             })
-        } else {
-            res.json({
-                type: 'failure',
-                err: 'incompleteForm'
-            })
-        }
+        let ment = await Mentee.findOne({phone : req.body.phone})
+        let response = await msg91otp.send('+91' + req.body.phone, {
+            otp_expiry: 10
+        })
+        return res.json({
+            result : "success",
+            response
+        })
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -421,28 +314,17 @@ router.post("/mentee/login/api/send-otp", async (req, res) => {
 
 router.post("/mentee/login/api/resend-otp", async (req, res) => {
     try {
-        if (req.body.phone != undefined && req.body.phone.length == 10) {
-            try {
-                var response = await msg91otp.retry('+91' + req.body.phone, {
-                    otp_expiry: 10
-                })
-                res.json({
-                    type: 'success',
-                    err: response
-                })
-            } catch (e) {
-                console.log(e)
-                res.json({
-                    type: 'failure',
-                    err: e
-                })
-            }
-        } else {
-            res.json({
-                type: 'failure',
-                err: 'incompleteForm'
+        if (req.body.phone == undefined || req.body.phone.length != 10)
+            return res.json({
+                result: "form incomplete"
             })
-        }
+        let response = await msg91otp.retry('+91' + req.body.phone, {
+            otp_expiry: 10
+        })
+        return res.json({
+            result: "success",
+            response
+        })
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -466,20 +348,12 @@ router.get('/mentee/home', authentication, (req, res) => {
 
 router.get('/mentee/email/:ver', async (req, res) => {
     try {
-        jwt.verify(req.params.ver, secret, async (err, authData) => {
-            if (err) {
-                res.send("Unable to verify try again")
-            } else {
-                var updateQuery = await Mentee.findByIdAndUpdate(authData.user.id, {
-                    emailVerification: true
-                }, (err, updated) => {
-                    if (err) {
-                        res.send("Unable to verify try again")
-                    } else {
-                        res.send('verified email thank you')
-                    }
-                })
-            }
+        let chk = await jwt.verify(req.params.ver, secret)
+        let ment = await Mentee.findByIdAndUpdate(chk.user.id, {
+            emailVerification: true
+        })
+        return res.json({
+            result: "success"
         })
     } catch (error) {
         res.json({
@@ -541,51 +415,20 @@ router.post("/mentee/profile/is-profile-complete", authentication, (req, res) =>
     }
 })
 
-router.get("/mentee/dashboard/my-mentor-details", authentication, async (req, res)=>{
-    var findQuery = await Mentee.findById(req.user._id, async (err, doc)=> {
-        if (err) {
-            res.json({
-                result : "error",
-                err
-            })
-        } else {
-            if (doc.mentorID != "none") {
-                var mentorFind = await Mentor.findById(doc.mentorID, (error, mentor)=> {
-                    if (error) {
-                        res.json({
-                            result : "error",
-                            error
-                        })
-                    } else {
-                        res.json({
-                            mentorName: mentor.name,
-                            mentorPhone: mentor.phone,
-                            mentorEmail: mentor.email,
-                            mentorId: mentor._id,
-                        })
-                    }
-                })
-            } else {
-                res.json({
-                    result: "no mentor"
-                })
-            }
-        }
-    })
-})
-
-router.get("/mentee/dashboard/notifications/fetch-all", authentication, async (req, res) => {
+router.get("/mentee/dashboard/my-mentor-details", authentication, async (req, res) => {
     try {
-        var findQuery =await Mentee.findById(req.user._id, (err, docu) => {
-            if (err) {
-                res.json({
-                    message: "Error Encountered"
-                })
-            } else {
-                res.json({
-                    notif: docu.notifications
-                })
-            }
+        let mentee = await Mentee.findById(req.user._id)
+        let mentor = await Mentor.findById(mentee.mentorID)
+        if (mentor)
+            return res.json({
+                mentorName: mentor.name,
+                mentorPhone: mentor.phone,
+                mentorEmail: mentor.email,
+                mentorId: mentor._id,
+                result: "success"
+            })
+        return res.json({
+            result: "no mentor"
         })
     } catch (error) {
         res.json({
@@ -595,7 +438,22 @@ router.get("/mentee/dashboard/notifications/fetch-all", authentication, async (r
     }
 })
 
-router.get("/mentee/create-notifications", authentication,async (req, res) => {
+router.get("/mentee/dashboard/notifications/fetch-all", authentication, async (req, res) => {
+    try {
+        let ment = await Mentee.findById(req.user._id)
+        return res.json({
+            result: "success",
+            notifications: ment.notifications
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.get("/mentee/create-notifications", authentication, async (req, res) => {
     try {
         var findQuery = await Mentee.findById(req.user._id, async (err, docu) => {
             if (err) {
@@ -633,27 +491,16 @@ router.get("/mentee/create-notifications", authentication,async (req, res) => {
     }
 })
 
-router.post("/mentee/dashhboard/notifications/delete-one", authentication,async (req, res) => {
+router.post("/mentee/dashboard/notifications/delete-one", authentication, async (req, res) => {
     try {
-        var findQuery = await Mentee.findById(req.user._id, async (err, docu) => {
-            if (err) {
-                res.json({
-                    message: "failed"
-                })
-            } else {
-                docu.notifications.id(req.body.notificationid).remove()
-            }
-            var saver = await docu.save((err) => {
-                if (err) {
-                    res.json({
-                        message: "save error"
-                    })
-                } else {
-                    res.json({
-                        message: "success"
-                    })
-                }
-            })
+        let ment = await Mentee.findById(req.user._id)
+        let notifys = ment.notifications
+        notifys.id(req.body.notificationid).remove()
+        await ment.update({
+            notifications: notifys
+        })
+        return res.json({
+            result: "success"
         })
     } catch (error) {
         res.json({
@@ -663,27 +510,16 @@ router.post("/mentee/dashhboard/notifications/delete-one", authentication,async 
     }
 })
 
-router.post("/mentee/dashhboard/notifications/mark-as-read", authentication,async (req, res) => {
+router.post("/mentee/dashboard/notifications/mark-as-read", authentication, async (req, res) => {
     try {
-        var findQuery = await Mentee.findById(req.user._id, async (err, docu) => {
-            if (err) {
-                res.json({
-                    message: "failed"
-                })
-            } else {
-                docu.notifications.id(req.body.notificationid).read = true
-            }
-            var saver = await docu.save((err) => {
-                if (err) {
-                    res.json({
-                        message: "save error"
-                    })
-                } else {
-                    res.json({
-                        message: "success"
-                    })
-                }
-            })
+        let ment = await Mentee.findById(req.user._id)
+        let notifys = ment.notifications
+        notifys.id(req.body.notificationid).read = true
+        await ment.update({
+            notifications: notifys
+        })
+        return res.json({
+            result: "success"
         })
     } catch (error) {
         res.json({
@@ -693,19 +529,15 @@ router.post("/mentee/dashhboard/notifications/mark-as-read", authentication,asyn
     }
 })
 
-router.post("/mentee/submit-feedback", authentication,async (req, res) => {
+router.post("/mentee/submit-feedback", authentication, async (req, res) => {
     try {
-        var feddbackCreate = await Feedback.create(req.body.feedback, (err, dat) => {
-            if (err) {
-                res.json({
-                    result: "error",
-                    error: err
-                })
-            } else {
-                res.json({
-                    result: "success"
-                })
-            }
+        var feedbackCreate = await Feedback.create(req.body.feedback)
+        if (!feedbackCreate)
+            return res.json({
+                result: "error"
+            })
+        return res.json({
+            result: "success"
         })
     } catch (error) {
         res.json({
@@ -715,42 +547,18 @@ router.post("/mentee/submit-feedback", authentication,async (req, res) => {
     }
 })
 
-router.post("/mentee/account/change-password", authentication,async (req, res) => {
+router.post("/mentee/account/change-password", authentication, async (req, res) => {
     try {
-        if (req.body.oldPassword != undefined & req.body.newPassword != undefined) {
-            var findQuery = await Mentee.findById(req.user._id, (err, ment) => {
-                if (err) {
-                    res.json({
-                        message: "error"
-                    })
-                } else {
-                    try {
-                        ment.changePassword(req.body.oldPassword, req.body.newPassword, (erro) => {
-                            if (erro.name == 'IncorrectPasswordError') {
-                                res.json({
-                                    result: "error",
-                                    erro
-                                })
-                            } else {
-                                ment.save()
-                                res.json({
-                                    result: "success"
-                                })
-                            }
-                        })
-                    } catch (error) {
-                        res.json({
-                            result: "error in changePassowrd",
-                            error
-                        })
-                    }
-                }
+        if (req.body.oldPassword == undefined || req.body.newPassword == undefined)
+            return res.json({
+                result: "form incomplete"
             })
-        } else {
-            res.json({
-                result: "incomplete form"
+        let ment = await Mentee.findById(req.user._id)
+        let newment = await ment.changePassword(req.body.oldPassword, req.body.newPassword)
+        if (newment)
+            return res.json({
+                result: "success"
             })
-        }
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -761,81 +569,47 @@ router.post("/mentee/account/change-password", authentication,async (req, res) =
 
 router.post("/mentee/dashboard/material-request", authentication, async (req, res) => {
     try {
-        if (req.body.material != undefined) {
-            var requests = req.body.material
-            var past = []
-            var select = true
-            var findQuery = await Mentee.findById(req.user._id,async (error, ment) => {
-                if (!error) {
-                    requests.forEach(async element => {
-                        if (ment.materialAccess.indexOf(element) == -1) {
-                            var reqCreate = await Request.create({
-                                menteeID: req.user._id,
-                                material: element,
-                            }, async (err, doc) => {
-                                if (err) {
-                                    select = false
-                                } else {
-                                    ment.requests.push(doc._id)
-                                    var saver = await ment.save()
-                                }
-                            })
-                        }
-                    })
-                } else {
-                    select = false
-                }
-            })
-            if (select) {
-                    res.json({
-                        result: "success"
-                    })
-            } else {
-                res.json({
-                    result: "error"
-                })
-            }
-        } else {
-            res.json({
+        if (!req.body.material)
+            return res.json({
                 result: "form incomplete"
             })
-        }
-    } catch (error) {
-        res.json({
-            result: "unexpected error",
-            error
-        })
-    }
-})
-
-router.get("/mentee/dashboard/past-material-requests", authentication,async (req, res) => {
-    try {
-        var findQuery = await Mentee.findById(req.user._id, (err, doc) => {
-            if (err) {
-                res.json({
-                    result: "error"
+        var requests = req.body.material
+        var past = []
+        let ment = await Mentee.findById(req.user._id);
+        for (let request of requests) {
+            if (ment.materialAccess.indexOf(request) == -1) {
+                let doc = await Request.create({
+                    menteeID: req.user._id,
+                    material: request,
                 })
-            } else {
-                var prev = doc.requests
-                var len = prev.length
-                var detArr = []
-                if (len-1 >=0) {
-                    prev.forEach(async element => {
-                        var reqFind = await Request.findById(element, (error, det) => {
-                            detArr.push(det);
-                            if (element==prev[len-1]) {
-                                res.json({
-                                    pastrequest: detArr,
-                                })
-                            }
-                        })
-                    })
-                } else {
-                    res.json({
-                        pastrequest: []
-                    })
-                }
+                await ment.update({
+                    $push: {
+                        requests: doc._id
+                    }
+                })
             }
+        }
+        return res.json({
+            result: "success"
+        })
+    } catch (error) {
+        return res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.get("/mentee/dashboard/past-material-requests", authentication, async (req, res) => {
+    try {
+        let detArr = []
+        let ment = await Mentee.findById(req.user._id);
+        let prev = ment.requests
+        for (let request of prev) {
+            detArr.push(await Request.findById(request));
+        }
+        return res.json({
+            pastrequest: detArr,
         })
     } catch (error) {
         res.json({
@@ -845,99 +619,26 @@ router.get("/mentee/dashboard/past-material-requests", authentication,async (req
     }
 })
 
-router.post("/mentee/helpdesk/new-ticket", authentication,async (req, res) => {
+router.post("/mentee/helpdesk/new-ticket", authentication, async (req, res) => {
     try {
-        if (req.body.subject != null && req.body.description != null && req.user != null) {
-            var helpCreate = await Help.create({
-                menteeID: req.user._id,
-                subject: req.body.subject,
-                description: req.body.description,
-            }, async (err, doc) => {
-                if (err) {
-                    res.json({
-                        result: "error"
-                    })
-                } else {
-                    var findQuery = await Mentee.findById(req.user._id,async (erro, ment) => {
-                        if (erro) {
-                            res.json({
-                                result: "error",
-                                erro
-                            })
-                        } else {
-                            ment.tickets.push(doc._id)
-                            var saver = await ment.save((error) => {
-                                if (error) {
-                                    res.json({
-                                        result: "error",
-                                        error
-                                    })
-                                } else {
-                                    res.json({
-                                        result: "success"
-                                    })
-                                }
-                            })
-                        }
-                    })
-                }
-            })
-        } else {
-            res.json({
+        if (!req.body.subject && !req.body.description)
+            return res.json({
                 result: "form incomplete"
             })
-        }
-    } catch (error) {
-        res.json({
-            result: "unexpected error",
-            error
+        let helpForm = await Help.create({
+            menteeID: req.user._id,
+            subject: req.body.subject,
+            description: req.body.description,
         })
-    }
-})
-
-router.get("/mentee/helpdesk/past-tickets", authentication,async (req, res) => {
-    try {
-        var findQuery = await Mentee.findById(req.user._id, (error, doc) => {
-            if (error) {
-                res.json({
-                    result: "error",
-                    error
-                })
-            } else {
-                var helpIDs = doc.tickets
-                var helpArr = []
-                var len = helpIDs.length
-                var selection = true
-                if (len-1>=0) {
-                    helpIDs.forEach(async element => {
-                        var helpFind = await Help.findById(element, (err, det) => {
-                            if (err) {
-                                selection = false
-                            } else {
-                                helpArr.push(det)
-                            }
-                            if (element==helpIDs[len-1]) {
-                                if (selection) {
-                                    res.json({
-                                        pasttickets: helpArr,
-                                        result: "success"
-                                    })
-                                } else {
-                                    res.json({
-                                        result: "error",
-                                        err
-                                    })
-                                }
-                            }
-                        })
-                    });
-                } else {
-                    res.json({
-                        pasttickets: []
-                    })
-                }
+        let ment = await Mentee.findById(req.user._id)
+        await ment.update({
+            $push: {
+                tickets: helpForm._id
             }
         })
+        return res.json({
+            result: "success"
+        })
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -946,34 +647,47 @@ router.get("/mentee/helpdesk/past-tickets", authentication,async (req, res) => {
     }
 })
 
-router.post("/mentee/library/get-access-token", authentication, (req, res) => {
+router.get("/mentee/helpdesk/past-tickets", authentication, async (req, res) => {
     try {
-        var mat = req.body.material
-        var chk = req.user.materialAccess.indexOf(mat)
-        if (chk != -1) {
-            jwt.sign({
-                user: req.user._id,
-                access: mat
-            }, secret, {
-                expiresIn: '1hr'
-            }, (error, tok) => {
-                if (error) {
-                    res.json({
-                        result: "error",
-                        error
-                    })
-                } else {
-                    res.json({
-                        result: "success",
-                        token: tok
-                    })
-                }
-            })
-        } else {
-            res.json({
+        let ment = await Mentee.findById(req.user._id)
+        let helpIDs = ment.tickets
+        let detArr = []
+        for (let hID of helpIDs) {
+            let help = await Help.findById(hID)
+            detArr.push(help)
+        }
+        return res.json({
+            pasttickets: detArr,
+            result: "success"
+        })
+    } catch (error) {
+        res.json({
+            result: "unexpected error",
+            error
+        })
+    }
+})
+
+router.post("/mentee/library/get-access-token", authentication, async (req, res) => {
+    try {
+        let ment = await Mentee.findById(req.user._id)
+        let accessible = ment.access
+        if (accessible.indexOf(req.body.material) == -1)
+            return res.json({
                 result: "forbidden"
             })
-        }
+        let token = jwt.sign({
+            user: req.user._id,
+            material: req.body.material
+        }, secret, {
+            expiresIn: "1hr"
+        })
+        if (token)
+            return res.json({
+                result: "success",
+                token: token
+            })
+
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -984,25 +698,14 @@ router.post("/mentee/library/get-access-token", authentication, (req, res) => {
 
 router.get("/mentee/library/material/view/:ver", authentication, (req, res) => {
     try {
-        jwt.verify(req.params.ver, secret, (err, authData) => {
-            if (err) {
-                res.json({
-                    result: "error",
-                    err
-                })
-            } else {
-                var chk = req.user.materialAccess.indexOf(authData.access)
-                if (chk != -1) {
-                    res.json({
-                        result: "success",
-                        material: authData.access
-                    })
-                } else {
-                    res.json({
-                        result: "forbidden",
-                    })
-                }
-            }
+        let chk = jwt.verify(req.params.ver, secret)
+        if (!chk || chk.user != req.user._id)
+            return res.json({
+                result: "forbidden"
+            })
+        return res.json({
+            result: "success",
+            material: chk.material
         })
     } catch (error) {
         res.json({
@@ -1012,27 +715,16 @@ router.get("/mentee/library/material/view/:ver", authentication, (req, res) => {
     }
 })
 
-router.get("mentee/library/material/download/:ver", authentication, (req, res)=>{
+router.get("mentee/library/material/download/:ver", authentication, (req, res) => {
     try {
-        jwt.verify(req.params.ver, secret, (err, authData) => {
-            if (err) {
-                res.json({
-                    result: "error",
-                    err
-                })
-            } else {
-                var chk = req.user.materialAccess.indexOf(authData.access)
-                if (chk != -1) {
-                    res.json({
-                        result: "success",
-                        material: authData.access // TO BE CHANGED IN FUTURE
-                    })
-                } else {
-                    res.json({
-                        result: "forbidden",
-                    })
-                }
-            }
+        let chk = jwt.verify(req.params.ver, secret)
+        if (!chk || chk.user != req.user._id)
+            return res.json({
+                result: "forbidden"
+            })
+        return res.json({
+            result: "success",
+            material: chk.material
         })
     } catch (error) {
         res.json({
@@ -1042,7 +734,7 @@ router.get("mentee/library/material/download/:ver", authentication, (req, res)=>
     }
 })
 
-router.post("/mentee/approve/request", authentication,async (req, res) => {
+router.post("/mentee/approve/request", authentication, async (req, res) => {
     try {
         var findQuery = await Mentee.findById(req.user._id, async (error, doc) => {
             if (error) {
@@ -1072,7 +764,7 @@ router.post("/mentee/approve/request", authentication,async (req, res) => {
     }
 })
 
-router.get("/mentee/account/payment-history", authentication,async (req, res) => {
+router.get("/mentee/account/payment-history", authentication, async (req, res) => {
     try {
         var findQuery = await Mentee.findById(req.user._id, (error, doc) => {
             if (error) {
@@ -1085,16 +777,16 @@ router.get("/mentee/account/payment-history", authentication,async (req, res) =>
                 var paymentArr = []
                 var len = paymentIDs.length
                 var selection = true
-                if (len-1>=0) {
+                if (len - 1 >= 0) {
                     paymentIDs.forEach(async element => {
-                        var helpFind = await Help.findById(element, (err, det) => {
+                        var helpFind = await Payment.findById(element, (err, det) => {
                             if (err) {
                                 selection = false
                                 return;
                             } else {
                                 paymentArr.push(det)
                             }
-                            if (element==paymentIDs[len-1]) {
+                            if (element == paymentIDs[len - 1]) {
                                 if (selection) {
                                     res.json({
                                         payments: paymentArr,
