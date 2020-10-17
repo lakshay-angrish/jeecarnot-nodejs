@@ -577,7 +577,7 @@ router.post("/mentee/dashboard/material-request", authentication, async (req, re
         var past = []
         let ment = await Mentee.findById(req.user._id);
         for (let request of requests) {
-            if (ment.materialAccess.indexOf(request) == -1) {
+            if (ment.access.indexOf(request) == -1) {
                 let doc = await Request.create({
                     menteeID: req.user._id,
                     material: request,
