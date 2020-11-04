@@ -91,7 +91,7 @@ router.post('/mentee/register', formFill, async (req, res) => {
     try {
         const response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
         if (response.type == 'success') {
-        //if (true) { // for testing purposes use this if loop.
+            //if (true) { // for testing purposes use this if loop.
             console.log(req.body.email)
             Mentee.register(new Mentee({
                     name: req.body.name,
@@ -190,10 +190,25 @@ router.get('/mentee/login', (req, res, next) => {
 
 router.put('/mentee/profile-complete', authentication, async (req, res) => {
     try {
-        req.body.plan = 'none' // Just to ensure that someone does not pass in plan as data in req
-        req.body.planID = ""
-        req.body.profileVerification = true
-        var updateQuery = await Mentee.findByIdAndUpdate(req.user._id, req.body, (err, updated) => {
+        var updateQuery = await Mentee.findByIdAndUpdate(req.user._id, {
+            profileVerification: true,
+            alternatephone: req.body.alternatephone,
+            parentname: req.body.parentname,
+            parentPhone: req.body.parentphone,
+            class: req.body.class,
+            lastAttemptJeeYear: req.body.lastAttemptJeeYear,
+            lastAttemptJeepercentile: req.body.lastAttemptJeepercentile,
+            targetYear: req.body.targetYear,
+            modePrepartion: req.body.modePrepartion,
+            otherTargetExams: req.body.otherTargetExams,
+            firstHear: req.body.firstHear,
+            whyWant: req.body.whyWant,
+            expectations: req.body.expectations,
+            language: req.body.language,
+            materialRequirement: req.body.materialRequirement,
+            plan: "none",
+            planID: "",
+        }, (err, updated) => {
             if (err) {
                 res.json({
                     result: 'failure',
@@ -255,7 +270,9 @@ router.post('/mentee/login', (req, res, next) => {
 
 router.post('/mentee/phonelogin', async (req, res, next) => {
     try {
-        let ment = await Mentee.findOne({phone : req.body.phone})
+        let ment = await Mentee.findOne({
+            phone: req.body.phone
+        })
         req.body.email = ment.email
         return next()
     } catch (error) {
@@ -272,16 +289,29 @@ router.post('/mentee/phonelogin', async (req, res, next) => {
 router.post('/mentee/otplogin', async (req, res) => {
     try {
         let response = await msg91otp.verify('+91' + req.body.phone, req.body.otp)
-        if (response.type=="success") {
-            let ment = await Mentee.findOne({phone : req.body.phone})
-            req.logIn(ment)
-            return res.json({
-                result : "success"
+        console.log(response)
+        if (response.type == "success") {
+            let ment = await Mentee.findOne({
+                phone: req.body.phone
             })
-        }
+            req.logIn(ment, (err)=>{
+                if (err) {
+                    console.log(err)
+                    return res.json({
+                        result: "failure",
+                        err
+                    })
+                }
+                return res.json({
+                    result: "success"
+                })
+            })
+            
+        } else {
         return res.json({
-            result : "failed verification"
+            result: "failed verification"
         })
+    }
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -296,14 +326,22 @@ router.post("/mentee/login/api/send-otp", async (req, res) => {
             return res.json({
                 result: "form incomplete"
             })
-        let ment = await Mentee.findOne({phone : req.body.phone})
-        let response = await msg91otp.send('+91' + req.body.phone, {
-            otp_expiry: 10
+        let ment = await Mentee.findOne({
+            phone: req.body.phone
         })
-        return res.json({
-            result : "success",
-            response
-        })
+        if (ment) {
+            let response = await msg91otp.send('+91' + req.body.phone, {
+                otp_expiry: 10
+            })
+            return res.json({
+                result: "success",
+                response
+            })
+        } else {
+            return res.json({
+                result: "new user"
+            })
+        }
     } catch (error) {
         res.json({
             result: "unexpected error",
@@ -377,15 +415,16 @@ router.get('/mentee/logout', (req, res) => {
     }
 })
 // I had the option to use passport.authenticate however using that would automatically create user object in the next request which would limit use of the function
-router.post('/mentee/profile/is-email-verified', authentication, (req, res) => {
+router.post('/mentee/profile/is-email-verified', authentication, async (req, res) => {
     try {
-        if (req.user.emailVerification) {
+        let ment = await Mentee.findById(req.user._id)
+        if (ment.emailVerification) {
             res.json({
                 result: "authorized"
             })
         } else {
             res.json({
-                result: "unauthorized"
+                result: "unauthorized",
             })
         }
     } catch (error) {
@@ -835,58 +874,54 @@ const validate = (email) => {
     return expression.test(String(email).toLowerCase())
 }
 
-function formFill(req, res, next) {
-    if (typeof (req.body.name) != 'undefined' &&
-        typeof (req.body.email) != 'undefined' && validate(req.body.email) &&
-        typeof (req.body.password) != 'undefined' &&
-        typeof (req.body.phone) != 'undefined' &&
-        req.body.phone.length == 10) {
-        Mentee.findOne({
-            phone: req.body.phone
-        }, (err, found) => {
-            if (err) {
-                console.log('encountered an error')
-                console.log(err)
-                res.json({
-                    type: 'failure',
-                    err: 'unknown 1'
-                })
-            } else if (found) {
-                console.log('aldready registered')
-                res.json({
-                    type: 'failure',
-                    err: 'duplicateMobile'
+async function formFill(req, res, next) {
+    try {
+        if (typeof (req.body.name) != 'undefined' &&
+            typeof (req.body.email) != 'undefined' && validate(req.body.email) &&
+            typeof (req.body.password) != 'undefined' &&
+            typeof (req.body.phone) != 'undefined' &&
+            req.body.phone.length == 10) {
+            let mobileSrch = await Mentee.findOne({
+                phone: req.body.phone
+            })
+            if (mobileSrch) {
+                console.log("mobile duplicate")
+                console.log(mobileSrch)
+                return res.json({
+                    type: "failure",
+                    error: "duplicate mobile"
                 })
             }
-        })
-        Mentee.findOne({
-            email: req.body.email
-        }, (err, fnd) => {
-            if (err) {
-                res.json({
-                    type: 'failure',
-                    err: 'unknown 2'
+            let emailSrch = await Mentee.findOne({
+                email: req.body.email
+            })
+            if (emailSrch) {
+                console.log("email duplicate")
+                console.log(emailSrch)
+                return res.json({
+                    type: "error",
+                    error: "duplicate email"
                 })
-            } else if (fnd) {
-                res.json({
-                    type: 'failure',
-                    err: 'duplicateEmail'
-                })
-            } else {
-                return next()
             }
-        })
-    } else if (req.body.phone.length != 10) {
-        console.log('wrong number');
+            console.log("verified form")
+            return next()
+        } else if (req.body.phone.length != 10) {
+            console.log('wrong number');
+            return res.json({
+                type: 'failure',
+                err: 'invalidNumber'
+            })
+        } else {
+            console.log('form incomplete');
+            return res.json({
+                type: 'failure',
+                err: "incomplete"
+            })
+        }
+    } catch (error) {
         res.json({
-            type: 'failure',
-            err: 'invalidNumber'
-        })
-    } else {
-        console.log('form incomplete');
-        res.json({
-            type: 'failure',
-            err: "incomplete"
+            type: "error in form",
+            err: error
         })
     }
 }
