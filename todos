@@ -1,0 +1,82 @@
+TODO
+if mobile exist before sending otp (shouldnot during register/should during login)
+if mail exist before sending otp
+use log4js to view errors in error.log file. during critical server errors use logger.error(err)
+
+PUT: mentee/complete-profile only selected below fields can be updated. Using current way user can update anything including payment details. so restrict it to given fields
+{
+    alternatephone:
+    parentname:
+    parentPhone:
+    class:
+    lastAttemptJeeYear:
+    lastAttemptJeepercentile:
+    targetYear:
+    modePreparation:
+    otherTargetExams:
+    language:
+    materialRequirement:
+    firstHear:
+    whyWant:
+    expectations:    
+}
+
+RES:
+{
+    type:'success/failure',
+    msg:'profile successfuly updated'
+}
+
+REVIEW
+language default:''
+mentor default:none not None
+
+fetch all notifications key should be notification not notif
+
+TODO
+add created_at timestamp in all models
+in materials and feedback add updated_at also
+
+wrap everything in try catch, eg. in notification apis
+
+auth middleware in mark as read notification
+
+TODO
+material requests api (workflow)
+
+-mentee sends material requests
+-validate the request (for now use a function to chec wheather every request start with 'p' or 'c' or 'm' will add more validations later)
+-remove the already own material from the request
+-log every individual request as new request in profile as well as in collection
+
+	eg: mentee asks for math-probability,physics-electrostats and chemistry-thermo (and mentee already have chemistry-thermo becoz he requested few days back and was issued)
+	so only math-probability and physics-electrostats request will be logged/stored individually (so that makes it two requests, one for math and one for physics) and as he alredy have chemistry-thermo so that request will be dropped and will not be logged anywhere
+	
+	when his mentor views his requests, he can see all requests from mentee and select few or all and approve them. status will be updated in collection as well as in mentees profile
+
+	finally when admin sees the requests and approves or declines, the status will be updated in mentees profile and the request will bee deleted from collection as there is no point of storing completed requests in database
+
+CHANGE IN MATERIAL FLOW
+-fetch pending requests
+-fetch completed requests
+
+in mentee sccheme there will be an field completedMatReq
+
+when the admin/mentor approve/reject a request then the request will be removed from the requests collection and also from the mentee schema:requests and the whole request document will be moved into mentee:completedMatReq
+
+SAME with tickets
+
+TODO
+change payment api
+approve/reject material request api is admin side api
+
+SUBMIT FEEDBACK
+-mentor and mentee id is not being recorded
+
+REQUESTS
+new field in mentee model completed requests: when request is processed and deleted from database and the mentee model but still the request is remained inside completed-requests field in mentee model
+
+so a new api will be added that will be fetch-past-material-requests-completed
+
+TICKETS(same liek requests)
+similiilarly with help tickets

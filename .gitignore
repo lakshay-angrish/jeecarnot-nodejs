@@ -1,1 +1,16 @@
 node_modules
+routes/.env
+
+.env
+test.http
+.http
+./test.http
+
+logs/access.log
+/logs/*
+./logs/*
+public/test/*
+.env
+.env
+
+.vscode

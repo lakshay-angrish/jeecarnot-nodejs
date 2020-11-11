@@ -6,17 +6,21 @@ const fs = require('fs')
 var path = require('path')
 
 const routes = require('./routes/index')
-
+const menteeRoute = require('./routes/mentee')
 // Middlewares
 app.set('view engine', 'ejs')
 app.use(express.static('public'))
 app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.urlencoded({
+    extended: true
+}))
 
 // Start Morgan Logger
 if (process.env._NODE_ENV === 'production') {
     app.use(morgan('common', {
-        stream: fs.createWriteStream(path.join(__dirname, '/logs/access.log'), { flags: 'a' })
+        stream: fs.createWriteStream(path.join(__dirname, '/logs/access.log'), {
+            flags: 'a'
+        })
     }))
 } else {
     app.use(morgan('dev'));
@@ -24,7 +28,7 @@ if (process.env._NODE_ENV === 'production') {
 
 // Routes
 app.use(routes)
-
+app.use(menteeRoute)
 
 
 // Start server
