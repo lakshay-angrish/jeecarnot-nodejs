@@ -1,5 +1,13 @@
 var mongoose = require("mongoose")
 var feedbackSchema = mongoose.Schema({
+    mentorId: {
+        type: String,
+        default: "UNDEFINED"
+    },
+    menteeId: {
+        type: String,
+        default: "UNDEFINED"
+    },
     effort: {
         type: String,
         default: ""

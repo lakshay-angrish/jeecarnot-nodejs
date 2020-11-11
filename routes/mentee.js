@@ -39,7 +39,9 @@ router.use(bodyparser.urlencoded({
 }))
 mongoose.connect(mongoDB, {
     useUnifiedTopology: true,
-    useNewUrlParser: true
+    useNewUrlParser: true,
+    useFindAndModify: false,
+    useCreateIndex: true
 })
 var db = mongoose.connection
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
@@ -205,20 +207,26 @@ router.put('/mentee/profile-complete', authentication, async (req, res) => {
             whyWant: req.body.whyWant,
             expectations: req.body.expectations,
             language: req.body.language,
-            materialRequirement: req.body.materialRequirement,
-            plan: "none",
-            planID: "",
-        }, (err, updated) => {
-            if (err) {
-                res.json({
-                    result: 'failure',
-                    err: 'updateFailed'
-                })
-            } else {
-                res.json({
-                    result: 'success'
-                })
-            }
+            materialRequirement: req.body.materialRequirement
+            // plan: "none",
+            // planID: "",
+        }
+        // ,
+        // (err, updated) => {
+        //     if (err) {
+        //         res.json({
+        //             result: 'failure',
+        //             err: 'updateFailed'
+        //         })
+        //     } else {
+        //         res.json({
+        //             result: 'success'
+        //         })
+        //     }
+        // }
+        )
+        res.json({
+            result: 'success'
         })
     } catch (error) {
         res.json({
@@ -535,7 +543,7 @@ router.post("/mentee/dashboard/notifications/delete-one", authentication, async 
         let ment = await Mentee.findById(req.user._id)
         let notifys = ment.notifications
         notifys.id(req.body.notificationid).remove()
-        await ment.update({
+        await ment.updateOne({
             notifications: notifys
         })
         return res.json({
@@ -554,7 +562,7 @@ router.post("/mentee/dashboard/notifications/mark-as-read", authentication, asyn
         let ment = await Mentee.findById(req.user._id)
         let notifys = ment.notifications
         notifys.id(req.body.notificationid).read = true
-        await ment.update({
+        await ment.updateOne({
             notifications: notifys
         })
         return res.json({
@@ -570,6 +578,8 @@ router.post("/mentee/dashboard/notifications/mark-as-read", authentication, asyn
 
 router.post("/mentee/submit-feedback", authentication, async (req, res) => {
     try {
+        req.body.feedback.menteeId=req.user._id;
+        req.body.feedback.mentorId=req.user.mentorID;
         var feedbackCreate = await Feedback.create(req.body.feedback)
         if (!feedbackCreate)
             return res.json({
@@ -621,7 +631,7 @@ router.post("/mentee/dashboard/material-request", authentication, async (req, re
                     menteeID: req.user._id,
                     material: request,
                 })
-                await ment.update({
+                await ment.updateOne({
                     $push: {
                         requests: doc._id
                     }
@@ -670,7 +680,7 @@ router.post("/mentee/helpdesk/new-ticket", authentication, async (req, res) => {
             description: req.body.description,
         })
         let ment = await Mentee.findById(req.user._id)
-        await ment.update({
+        await ment.updateOne({
             $push: {
                 tickets: helpForm._id
             }
@@ -742,6 +752,8 @@ router.get("/mentee/library/material/view/:ver", authentication, (req, res) => {
             return res.json({
                 result: "forbidden"
             })
+        
+        // TODO: send the requested material file to view
         return res.json({
             result: "success",
             material: chk.material
@@ -758,9 +770,10 @@ router.get("mentee/library/material/download/:ver", authentication, (req, res) =
     try {
         let chk = jwt.verify(req.params.ver, secret)
         if (!chk || chk.user != req.user._id)
-            return res.json({
-                result: "forbidden"
-            })
+        return res.json({
+            result: "forbidden"
+        })
+        // TODO: send the requested material file for download
         return res.json({
             result: "success",
             material: chk.material

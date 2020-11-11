@@ -69,3 +69,14 @@ SAME with tickets
 TODO
 change payment api
 approve/reject material request api is admin side api
+
+SUBMIT FEEDBACK
+-mentor and mentee id is not being recorded
+
+REQUESTS
+new field in mentee model completed requests: when request is processed and deleted from database and the mentee model but still the request is remained inside completed-requests field in mentee model
+
+so a new api will be added that will be fetch-past-material-requests-completed
+
+TICKETS(same liek requests)
+similiilarly with help tickets
