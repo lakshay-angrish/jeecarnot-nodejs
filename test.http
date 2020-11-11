@@ -1,1 +1,136 @@
-GET http://localhost:3333/
+### SIGNUP
+
+
+### LOGIN
+POST http://localhost:3333/mentee/login
+Content-Type: application/json
+
+{
+    "email":"hovol42101@rmomail.com",
+    "password":"hovol42101@rmomail.com"
+}
+
+### NOTIFICATION - fetch-all
+GET http://localhost:3333/mentee/dashboard/notifications/fetch-all HTTP/1.1
+
+### NOTIFICATION - create
+GET http://localhost:3333/mentee/create-notifications HTTP/1.1
+
+### NOTIFICATION - delete
+POST http://localhost:3333/mentee/dashboard/notifications/delete-one
+Content-Type: application/json
+
+{
+    "notificationid":"5fa3e37884148f60c0bb26e6s"
+}
+
+### NOTIFICATION - mark-as-read
+POST http://localhost:3333/mentee/dashboard/notifications/mark-as-read
+Content-Type: application/json
+
+{
+    "notificationid":"5fa3e2fecbc2cd63281fb1a3"
+}
+
+### FEEDBACK - submit
+POST http://localhost:3333/mentee/submit-feedback
+Content-Type: application/json
+
+{
+    "feedback":{
+    "effort": 5,
+    "mentorEffort": 5,
+    "serviceSatisfaction": 5,
+    "mathAssignment":4,
+    "physicsAssignment":5,
+    "chemAssignment": 5,
+    "assignedWork":3,
+    "supportMentor":5,
+    "queryMentor":4,
+    "materialMentor": 5,
+    "motivateMentor":5,
+    "regularMentor": 4,
+    "focusMentor":5,
+    "difficultMentor":3,
+    "carnotEffectiveness": 5,
+    "commentMentor":"This is comment for mentor 1",
+    "carnotRecommend":"yes"}
+}
+
+###
+
+### PASSWORD - change
+POST http://localhost:3333/mentee/account/change-password
+Content-Type: application/json
+
+{
+    "newPassword":"old",
+    "oldPassword":"new"
+}
+
+### PROFILE - complete  profile
+PUT http://localhost:3333/mentee/profile-complete
+Content-Type: application/json
+
+{
+    "alternatephone":"9898989897",
+    "parentname": "PNAME 2",
+    "parentPhone": "7894567894",
+    "class": "12",
+    "lastAttemptJeeYear":"",
+    "lastAttemptJeepercentile":"",
+    "targetYear":"",
+    "modePreparation":"Self",
+    "otherTargetExams":"BITSAT, VITEEE, UPSC",
+    "language":"English",
+    "materialRequirement":"Test Only",
+    "firstHear":"Facebook",
+    "whyWant":"I want mentorship because .....",
+    "expectations":"Bla bla bla"
+}
+
+### MATERIAL -request new material
+POST http://localhost:3333/mentee/dashboard/material-request
+Content-Type: application/json
+
+{   
+    "material":["p-cb-th","m-st-fs","mine","mine-already","not-mine"]
+}
+### Fetch past requests
+GET http://localhost:3333/mentee/dashboard/past-material-requests
+
+### MATERIAL -get token
+POST http://localhost:3333/mentee/library/get-access-token
+Content-Type: application/json
+
+{
+    "material":"mine"
+}
+### MATERIAL -view
+GET http://localhost:3333/mentee/library/material/view/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNWZhM2RmZTJjYmMyY2Q2MzI4MWZiMTlmIiwibWF0ZXJpYWwiOiJtaW5lIiwiaWF0IjoxNjA0NjA2OTk4LCJleHAiOjE2MDQ2MTA1OTh9.2Elr_qVQPGtFu3yHkAqXdCUS6rUb9lk3pYLljLrHesQ
+### MATERIAL -download
+
+
+### HELPDESK -new ticket
+POST http://localhost:3333/mentee/helpdesk/new-ticket
+Content-Type: application/json
+
+{
+    "subject":"TEST SUB",
+    "description":"TEST DESCRIPTION"
+}
+
+### HELPDESK -past tickets
+GET http://localhost:3333/mentee/helpdesk/past-tickets
+
+### PAYMENT HISTORY
+GET http://localhost:3333/mentee/account/payment-history
+
+### LOGIN ( REPEAT: FOR CONVINIENCE ONLY)
+POST http://localhost:3333/mentee/login
+Content-Type: application/json
+
+{
+    "email":"hovol42101@rmomail.com",
+    "password":"hovol42101@rmomail.com"
+}
