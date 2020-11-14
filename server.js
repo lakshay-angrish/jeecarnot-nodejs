@@ -7,6 +7,8 @@ var path = require('path')
 
 const routes = require('./routes/index')
 const menteeRoute = require('./routes/mentee')
+const trackerRouter = require('./routes/trackerRouter')
+
 // Middlewares
 app.set('view engine', 'ejs')
 app.use(express.static('public'))
@@ -29,7 +31,7 @@ if (process.env._NODE_ENV === 'production') {
 // Routes
 app.use(routes)
 app.use(menteeRoute)
-
+app.use(trackerRouter)
 
 // Start server
 const PORT = process.env._NODE_PORT || 3000
