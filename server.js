@@ -31,7 +31,7 @@ if (process.env._NODE_ENV === 'production') {
 // Routes
 app.use(routes)
 app.use(menteeRoute)
-app.use(trackerRouter)
+app.use('/tracker/api', trackerRouter)
 
 // Start server
 const PORT = process.env._NODE_PORT || 3000
