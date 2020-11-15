@@ -2,8 +2,9 @@ const router = require("express").Router();
 const Tracker = require("../models/tracker");
 const Chapter = require("../models/chapter");
 const Subtopic = require("../models/subtopic");
+const chapterData = require("../chapterData.json");
 
-router.post("/tracker/api/update", async (req, res, next) => {
+router.post("/tracker/api/update-subtopic", async (req, res, next) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({
       error: "User not authenticated",
@@ -27,84 +28,72 @@ router.post("/tracker/api/update", async (req, res, next) => {
       console.log("tracker found");
     }
 
-    let chapter = await Chapter.findOne({
-      trackerID: tracker._id,
-      code: req.body.chapterCode,
-    }).exec();
-
-    if (!chapter) {
-      chapter = new Chapter({
-        trackerID: tracker._id,
-        code: req.body.chapterCode,
-        class: req.body.chapterClass,
-        name: req.body.chapterName,
-      });
-      await chapter.save();
+    if (!chapterData[req.body.chapterCode]) {
       console.log("chapter not found");
-    } else {
-      console.log("chapter found");
-    }
-
-    let subtopic = await Subtopic.findOne({
-      chapterID: chapter._id,
-      name: req.body.subtopicName,
-    }).exec();
-
-    if (!subtopic) {
-      subtopic = new Subtopic({
-        chapterID: chapter._id,
-        name: req.body.subtopicName,
+      return res.status(500).json({
+        error: "Invalid Chapter Code",
       });
-      await subtopic.save();
+    }
+
+    let chapterIndex = -1;
+    for (i in tracker.chapters) {
+      if (tracker.chapters[i].code == req.body.chapterCode) {
+        chapterIndex = i;
+        console.log("chapter found");
+        break;
+      }
+    }
+
+    if (chapterIndex == -1) {
+      console.log("chapter not found");
+      tracker.chapters.push(
+        new Chapter({
+          code: req.body.chapterCode,
+          name: chapterData[req.body.chapterCode].name,
+          class: chapterData[req.body.chapterCode].class,
+          subtopics: chapterData[req.body.chapterCode].subtopics.map(
+            (subtopic) => new Subtopic({ ...subtopic })
+          ),
+        })
+      );
+      chapterIndex = tracker.chapters.length - 1;
+    }
+
+    let subtopicIndex = -1;
+    for (subtopic of tracker.chapters[chapterIndex].subtopics) {
+      if (subtopic.name == req.body.subtopicName) {
+        console.log("subtopic found");
+        subtopic.theory = req.body.status[0];
+        subtopic.level1 = req.body.status[1];
+        subtopic.level2 = req.body.status[2];
+        subtopicIndex = i;
+        break;
+      }
+    }
+
+    if (subtopicIndex == -1) {
       console.log("subtopic not found");
-    } else {
-      console.log("subtopic found");
+      tracker.chapters[chapterIndex].subtopics.push(
+        new Subtopic({
+          name: req.body.subtopicName,
+          theory: req.body.status[0],
+          level1: req.body.status[1],
+          level2: req.body.status[2],
+        })
+      );
+      subtopicIndex = tracker.chapters[chapterIndex].subtopics.length - 1;
     }
 
-    let { theory, level1, level2 } = subtopic;
-    if (req.body.subtopicTheory) {
-      theory = req.body.subtopicTheory;
-      console.log("theory received");
-    }
-    if (req.body.subtopicLevel1) {
-      level1 = req.body.subtopicLevel1;
-      console.log("level1 received");
-    }
-    if (req.body.subtopicLevel2) {
-      level2 = req.body.subtopicLevel2;
-      console.log("level2 received");
-    }
-
-    let { status, remark } = chapter;
-    if (req.body.chapterStatus) {
-      status = req.body.chapterStatus;
-      console.log("status received");
-    }
-    if (req.body.chapterRemark) {
-      remark = req.body.chapterRemark;
-      console.log("remark received");
-    }
-
-    await Chapter.findByIdAndUpdate(chapter._id, {
-      $set: {
-        status: status,
-        remark: remark,
-      },
-    });
-
-    await Subtopic.findByIdAndUpdate(subtopic._id, {
-      $set: {
-        theory: theory,
-        level1: level1,
-        level2: level2,
-      },
-    });
+    await tracker.save();
 
     res.status(200).json({
-      status: "Tracker Updated",
+      type: "success",
+      description: "Tracker Updated",
+      tracker,
     });
   } catch (error) {
     return res.json({
+      type: "failure",
       error: error.message,
     });
   }

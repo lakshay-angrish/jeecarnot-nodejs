@@ -1,0 +1,56 @@
+{
+  "p-es": {
+    "name": "ElectroStatics",
+    "class": 11,
+    "subtopics": [
+      {
+        "name": "sb1",
+        "theory": false,
+        "level1": false,
+        "level2": false
+      },
+      {
+        "name": "sb2",
+        "theory": false,
+        "level1": false,
+        "level2": false
+      }
+    ]
+  },
+  "m-cs": {
+    "name": "Calculus",
+    "class": 12,
+    "subtopics": [
+      {
+        "name": "sb1",
+        "theory": false,
+        "level1": false,
+        "level2": false
+      },
+      {
+        "name": "sb2",
+        "theory": false,
+        "level1": false,
+        "level2": false
+      }
+    ]
+  },
+  "c-pb": {
+    "name": "P Block Elements",
+    "class": 12,
+    "subtopics": [
+      {
+        "name": "sb1",
+        "theory": false,
+        "level1": false,
+        "level2": false
+      },
+      {
+        "name": "sb2",
+        "theory": false,
+        "level1": false,
+        "level2": false
+      }
+    ]
+  }
+}
