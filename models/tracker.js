@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Chapter = require("./chapter").schema;
 
 const trackerSchema = new mongoose.Schema({
   menteeID: {
@@ -6,6 +7,7 @@ const trackerSchema = new mongoose.Schema({
     ref: "Mentee",
     required: true,
   },
+  chapters: [Chapter],
 });
 
 module.exports = mongoose.model("Tracker", trackerSchema);

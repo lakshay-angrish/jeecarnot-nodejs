@@ -1,10 +1,7 @@
 const mongoose = require("mongoose");
+const Subtopic = require("./subtopic").schema;
 
 const chapterSchema = new mongoose.Schema({
-  trackerID: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
   code: {
     type: String,
     default: "code",
@@ -28,6 +25,7 @@ const chapterSchema = new mongoose.Schema({
     enum: ["ongoing", "completed", "none"],
     default: "none",
   },
+  subtopics: [Subtopic],
 });
 
 module.exports = mongoose.model("Chapter", chapterSchema);

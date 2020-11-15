@@ -1,10 +1,6 @@
 const mongoose = require("mongoose");
 
 const subtopicSchema = new mongoose.Schema({
-  chapterID: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
   name: {
     type: String,
     required: true,
