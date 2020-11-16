@@ -144,3 +144,52 @@ exports.addRemark = async (req, res, next) => {
     });
   }
 };
+
+exports.resetChapter = async (req, res, next) => {
+  try {
+    if (!req.body.chapterCode) {
+      throw new Error("chapterCode must be supplied");
+    }
+    let tracker = await Tracker.findOne({ menteeID: req.user._id }).exec();
+
+    if (!tracker) {
+      tracker = new Tracker({ menteeID: req.user._id });
+      await tracker.save();
+      console.log("tracker not found");
+    } else {
+      console.log("tracker found");
+    }
+
+    if (!chapterData[req.body.chapterCode]) {
+      console.log("chapter not found");
+      throw new Error("Invalid Chapter Code");
+    }
+
+    for (i in tracker.chapters) {
+      if (tracker.chapters[i].code == req.body.chapterCode) {
+        console.log("chapter found");
+        tracker.chapters[i] = new Chapter({
+          code: req.body.chapterCode,
+          name: chapterData[req.body.chapterCode].name,
+          class: chapterData[req.body.chapterCode].class,
+          subtopics: chapterData[req.body.chapterCode].subtopics.map(
+            (subtopic) => new Subtopic({ ...subtopic })
+          ),
+        });
+        break;
+      }
+    }
+
+    await tracker.save();
+
+    res.status(200).json({
+      type: "success",
+      description: "Chapter Reset",
+    });
+  } catch (error) {
+    res.status(500).json({
+      type: "failure",
+      error: error.message,
+    });
+  }
+};

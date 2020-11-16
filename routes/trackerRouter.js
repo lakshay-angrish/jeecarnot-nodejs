@@ -6,4 +6,6 @@ router.post("/update-subtopic", checkAuth, trackerController.updateSubtopic);
 
 router.post("/add-remark", checkAuth, trackerController.addRemark);
 
+router.post("/reset-chapter", checkAuth, trackerController.resetChapter);
+
 module.exports = router;
