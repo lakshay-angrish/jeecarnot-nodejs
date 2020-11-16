@@ -5,8 +5,15 @@ const chapterData = require("../chapterData.json");
 
 exports.updateSubtopic = async (req, res, next) => {
   try {
-    if (!req.body.chapterCode || !req.body.subtopicName) {
-      throw new Error("chapterCode and subtopicName must be supplied");
+    if (
+      !req.body.chapterCode ||
+      !req.body.subtopicName ||
+      !req.body.status ||
+      req.body.status.length != 3
+    ) {
+      throw new Error(
+        "chapterCode, subtopicName and status(with status.length == 3) must be supplied"
+      );
     }
     let tracker = await Tracker.findOne({ menteeID: req.user._id }).exec();
 
