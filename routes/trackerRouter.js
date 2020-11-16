@@ -8,4 +8,10 @@ router.post("/add-remark", checkAuth, trackerController.addRemark);
 
 router.post("/reset-chapter", checkAuth, trackerController.resetChapter);
 
+router.post(
+  "/mark-for-revision",
+  checkAuth,
+  trackerController.markChapterForRevision
+);
+
 module.exports = router;
