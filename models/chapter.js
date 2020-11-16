@@ -22,7 +22,7 @@ const chapterSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["ongoing", "completed", "none"],
+    enum: ["ongoing", "completed", "revision", "none"],
     default: "none",
   },
   subtopics: [Subtopic],
