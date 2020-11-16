@@ -4,13 +4,10 @@ const Subtopic = require("../models/subtopic");
 const chapterData = require("../chapterData.json");
 
 exports.updateSubtopic = async (req, res, next) => {
-  if (!req.body.chapterCode || !req.body.subtopicName) {
-    return res.status(500).json({
-      error: "chapterCode and subtopicName must be supplied",
-    });
-  }
-
   try {
+    if (!req.body.chapterCode || !req.body.subtopicName) {
+      throw new Error("chapterCode and subtopicName must be supplied");
+    }
     let tracker = await Tracker.findOne({ menteeID: req.user._id }).exec();
 
     if (!tracker) {
@@ -23,9 +20,7 @@ exports.updateSubtopic = async (req, res, next) => {
 
     if (!chapterData[req.body.chapterCode]) {
       console.log("chapter not found");
-      return res.status(500).json({
-        error: "Invalid Chapter Code",
-      });
+      throw new Error("Invalid Chapter Code");
     }
 
     let chapterIndex = -1;
@@ -82,14 +77,70 @@ exports.updateSubtopic = async (req, res, next) => {
     res.status(200).json({
       type: "success",
       description: "Tracker Updated",
-      tracker,
     });
   } catch (error) {
-    return res.json({
+    res.status(500).json({
       type: "failure",
       error: error.message,
     });
   }
 };
 
-exports.addRemark = async (req, res, next) => {};
+exports.addRemark = async (req, res, next) => {
+  try {
+    if (!req.body.chapterCode || !req.body.remark) {
+      throw new Error("chapterCode and subtopicName must be supplied");
+    }
+    let tracker = await Tracker.findOne({ menteeID: req.user._id }).exec();
+
+    if (!tracker) {
+      tracker = new Tracker({ menteeID: req.user._id });
+      await tracker.save();
+      console.log("tracker not found");
+    } else {
+      console.log("tracker found");
+    }
+
+    if (!chapterData[req.body.chapterCode]) {
+      console.log("chapter not found");
+      throw new Error("Invalid Chapter Code");
+    }
+
+    let chapterIndex = -1;
+    for (i in tracker.chapters) {
+      if (tracker.chapters[i].code == req.body.chapterCode) {
+        chapterIndex = i;
+        console.log("chapter found");
+        tracker.chapters[i].remark = req.body.remark;
+        break;
+      }
+    }
+
+    if (chapterIndex == -1) {
+      console.log("chapter not found");
+      tracker.chapters.push(
+        new Chapter({
+          code: req.body.chapterCode,
+          name: chapterData[req.body.chapterCode].name,
+          class: chapterData[req.body.chapterCode].class,
+          remark: req.body.remark,
+          subtopics: chapterData[req.body.chapterCode].subtopics.map(
+            (subtopic) => new Subtopic({ ...subtopic })
+          ),
+        })
+      );
+    }
+
+    await tracker.save();
+
+    res.status(200).json({
+      type: "success",
+      description: "Tracker Updated",
+    });
+  } catch (error) {
+    res.status(500).json({
+      type: "failure",
+      error: error.message,
+    });
+  }
+};
