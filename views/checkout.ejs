@@ -1,0 +1,63 @@
+<style>
+    table,
+    td {
+        border: 1px solid black;
+        border-collapse: collapse;
+        padding: 5px;
+    }
+</style>
+<h3>Checkout</h3>
+<table>
+    <tr>
+        <td>Amount</td>
+        <td><%=data.amount%></td>
+    </tr>
+    <tr>
+        <td>Plan</td>
+        <td><%=data.planName%></td>
+    </tr>
+    <tr>
+        <td>Name</td>
+        <td><%=data.firstName%></td>
+    </tr>
+    <tr>
+        <td>Email</td>
+        <td><%=data.email%></td>
+    </tr>
+    <tr>
+        <td>Phone</td>
+        <td><%=data.mobile%></td>
+    </tr>
+</table>
+
+<br>
+
+<form action="https://sandboxsecure.payu.in/_payment" id="payuform" method="POST">
+    <input type="hidden" id="surl" name="surl" value="http://localhost:3333/payU/success" />
+    <input type="hidden" id="furl" name="furl" value="http://localhost:3333/payU/failure" />
+
+    <input name="hash" value='<%=data.hash%>' type="hidden" />
+
+    <input type="hidden" name="service_provider" value="payu_paisa" />
+
+    <input name="key" value='<%=data.key%>' type="hidden" />
+
+    <input name="salt" value='<%=data.salt%>' type="hidden" />
+
+    <input name="udf1" value='<%=data.udf1%>' type="hidden" />
+    <input name="udf2" value='<%=data.udf2%>' type="hidden" />
+    <input name="udf3" value='<%=data.udf3%>' type="hidden" />
+
+    <input name="txnid" value='<%=data.txnid%>' type="hidden" />
+
+    <input name="amount" value='<%=data.amount%>' type="hidden" />
+
+    <input name="productInfo" value='<%=data.planName%>' type="hidden" />
+
+    <input name="firstName" value='<%=data.firstName%>' type="hidden" />
+
+    <input name="email" value='<%=data.email%>' type="hidden" />
+
+    <input name="phone" value='<%=data.mobile%>' type="hidden" />
+    <input type="submit" value="Pay" />
+</form>
