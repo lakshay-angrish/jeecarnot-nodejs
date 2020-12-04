@@ -1,6 +1,28 @@
 require("dotenv").config();
+const Mentee = require("../models/menteeModel");
+const AssignMentor = require("../models/assignMentor");
+const Payment = require("../models/menteePayment");
 const staticData = require("../staticData.json");
 const crypto = require("crypto");
+const admin = require("firebase-admin");
+const serviceAccount = require("../firebase-adminSDK.json");
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+
+async function sendNotifications(message, registrationTokens) {
+  if (registrationTokens.length == 0) {
+    console.log("tokens missing");
+    return;
+  }
+  let response = await admin.messaging().sendMulticast({
+    notification: {
+      title: message.title,
+      body: message.body,
+      image: message.image,
+    },
+    tokens: registrationTokens,
+  });
+  console.log("Successfully sent message:", response);
+}
 
 exports.checkout = async (req, res, next) => {
   try {
@@ -107,6 +129,48 @@ exports.successCallback = async (req, res, next) => {
     if (hash != data.hash) {
       throw new Error("Unauthorized Request");
     }
+
+    const menteeID = data.udf1;
+    let mentee = await Mentee.findByIdAndUpdate(menteeID, {
+      validity: data.udf3,
+    });
+
+    if (!mentee) {
+      throw new Error("Mentee not found");
+    }
+
+    let recipients = [];
+    recipients = [...mentee.mobileTokens];
+    if (mentee.webToken) recipients.push(mentee.webToken);
+
+    await sendNotifications(
+      {
+        title: "Payment Successful",
+        body: "Amount of: Rs." + data.amount + " paid for: " + data.productinfo,
+      },
+      recipients
+    );
+
+    let assign = new AssignMentor({
+      menteeID: menteeID,
+    });
+
+    await assign.save();
+
+    let payment = new Payment({
+      menteeID: menteeID,
+      amountPaid: data.amount,
+      plan: data.productinfo,
+      txnid: data.txnid,
+    });
+
+    await payment.save();
+
+    await Mentee.findByIdAndUpdate(menteeID, {
+      $push: {
+        payments: payment._id,
+      },
+    });
 
     res.status(200).json({
       type: "success",

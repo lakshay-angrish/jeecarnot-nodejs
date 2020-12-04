@@ -14,3 +14,5 @@ public/test/*
 .env
 
 .vscode
+
+firebase-adminSDK.json

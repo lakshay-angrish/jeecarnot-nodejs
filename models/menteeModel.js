@@ -80,6 +80,7 @@ var MenteeSchema = mongoose.Schema({
         type: String,
         default: 'none'
     },
+    validity: Number,
     notifications: [Notifications],
     requests: [String],
     tickets: [String],
@@ -91,7 +92,9 @@ var MenteeSchema = mongoose.Schema({
     mentorAssign :{
         type: String,
         default: "none"
-    }
+    },
+    webToken: String,
+    mobileTokens: [String],
 }, {timestamps: true})
 
 MenteeSchema.plugin(passportLocalMongoose, {
