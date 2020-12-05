@@ -2,6 +2,7 @@ require("dotenv").config();
 const Mentee = require("../models/menteeModel");
 const AssignMentor = require("../models/assignMentor");
 const Payment = require("../models/menteePayment");
+const UnresolvedPayments = require("../models/unresolvedMenteePayments");
 const staticData = require("../staticData.json");
 const crypto = require("crypto");
 const admin = require("firebase-admin");
@@ -109,7 +110,7 @@ exports.failureCallback = async (req, res, next) => {
   });
 };
 
-exports.successWebhook = async (req, res, next) => {
+exports.webhook = async (req, res, next) => {
   try {
     const data = req.body;
     let cryp = crypto.createHash("sha512");
@@ -150,25 +151,7 @@ exports.successWebhook = async (req, res, next) => {
       throw new Error("Mentee not found");
     }
 
-    let recipients = [];
-    recipients = [...mentee.mobileTokens];
-    if (mentee.webToken) recipients.push(mentee.webToken);
-
-    await sendNotifications(
-      {
-        title: "Payment Successful",
-        body: "Amount of: Rs." + data.amount + " paid for: " + data.productinfo,
-      },
-      recipients
-    );
-
-    let assign = new AssignMentor({
-      menteeID: menteeID,
-    });
-
-    await assign.save();
-
-    let payment = new Payment({
+    let paymentData = {
       isConsentPayment: req.body.isConsentPayment,
       mihpayid: req.body.mihpayid,
       mode: req.body.mode,
@@ -220,7 +203,43 @@ exports.successWebhook = async (req, res, next) => {
       payuMoneyId: req.body.payuMoneyId,
       discount: req.body.discount,
       net_amount_debit: req.body.net_amount_debit,
+    };
+
+    if (req.body.status != "success" && req.body.status != "failure") {
+      let unresolvedPayment = new UnresolvedPayments(paymentData);
+      await unresolvedPayment.save();
+      return res.status(200).json({
+        type: "unresolved",
+        message: "unresolved transaction",
+      });
+    }
+
+    if (req.body.status == "failure") {
+      return res.status(200).json({
+        type: "failed",
+        message: "failed transaction",
+      });
+    }
+
+    let recipients = [];
+    recipients = [...mentee.mobileTokens];
+    if (mentee.webToken) recipients.push(mentee.webToken);
+
+    await sendNotifications(
+      {
+        title: "Payment Successful",
+        body: "Amount of: Rs." + data.amount + " paid for: " + data.productinfo,
+      },
+      recipients
+    );
+
+    let assign = new AssignMentor({
+      menteeID: menteeID,
     });
+
+    await assign.save();
+
+    let payment = new Payment(paymentData);
 
     await payment.save();
 

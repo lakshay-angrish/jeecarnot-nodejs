@@ -7,6 +7,6 @@ router.get("/checkout", checkAuth, payUController.checkout);
 router.post("/success", checkAuth, payUController.successCallback);
 router.post("/failure", checkAuth, payUController.failureCallback);
 
-router.post("/successWebhook", payUController.successWebhook);
+router.post("/webhook", payUController.webhook);
 
 module.exports = router;
