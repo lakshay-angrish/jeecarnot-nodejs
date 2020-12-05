@@ -46,7 +46,6 @@ exports.checkout = async (req, res, next) => {
 
     const data = {
       key: process.env.MERCHANT_KEY,
-      salt: process.env.MERCHANT_SALT,
       txnid: req.user._id + Date.now(),
       amount: selectedPlan.amount,
       planName: selectedPlan.name,
@@ -81,7 +80,7 @@ exports.checkout = async (req, res, next) => {
       "|" +
       data.udf3 +
       "||||||||" +
-      data.salt;
+      process.env.MERCHANT_SALT;
 
     cryp.update(text);
     data.hash = cryp.digest("hex");
@@ -97,6 +96,20 @@ exports.checkout = async (req, res, next) => {
 };
 
 exports.successCallback = async (req, res, next) => {
+  res.status(200).json({
+    type: "success",
+    message: "Transaction Successful",
+  });
+};
+
+exports.failureCallback = async (req, res, next) => {
+  res.status(200).json({
+    type: "failure",
+    message: "Transaction Failure",
+  });
+};
+
+exports.successWebhook = async (req, res, next) => {
   try {
     const data = req.body;
     let cryp = crypto.createHash("sha512");
@@ -131,9 +144,7 @@ exports.successCallback = async (req, res, next) => {
     }
 
     const menteeID = data.udf1;
-    let mentee = await Mentee.findByIdAndUpdate(menteeID, {
-      validity: data.udf3,
-    });
+    let mentee = await Mentee.findById(menteeID);
 
     if (!mentee) {
       throw new Error("Mentee not found");
@@ -158,15 +169,96 @@ exports.successCallback = async (req, res, next) => {
     await assign.save();
 
     let payment = new Payment({
-      menteeID: menteeID,
-      amountPaid: data.amount,
-      plan: data.productinfo,
-      txnid: data.txnid,
+      isConsentPayment: req.body.isConsentPayment,
+      mihpayid: req.body.mihpayid,
+      mode: req.body.mode,
+      status: req.body.status,
+      unmappedstatus: req.body.unmappedstatus,
+      txnid: req.body.txnid,
+      amount: req.body.amount,
+      addedon: req.body.addedon,
+      productinfo: req.body.productinfo,
+      firstname: req.body.firstname,
+      lastname: req.body.lastname,
+      address1: req.body.address1,
+      address2: req.body.address2,
+      city: req.body.city,
+      state: req.body.state,
+      country: req.body.country,
+      zipcode: req.body.zipcode,
+      email: req.body.email,
+      phone: req.body.phone,
+      udf1: req.body.udf1,
+      udf2: req.body.udf2,
+      udf3: req.body.udf3,
+      udf4: req.body.udf4,
+      udf5: req.body.udf5,
+      udf6: req.body.udf6,
+      udf7: req.body.udf7,
+      udf8: req.body.udf8,
+      udf9: req.body.udf9,
+      udf10: req.body.udf10,
+      field1: req.body.field1,
+      field2: req.body.field2,
+      field3: req.body.field3,
+      field4: req.body.field4,
+      field5: req.body.field5,
+      field6: req.body.field6,
+      field7: req.body.field7,
+      field8: req.body.field8,
+      field9: req.body.field9,
+      giftCardIssued: req.body.giftCardIssued,
+      PG_TYPE: req.body.PG_TYPE,
+      encryptedPaymentId: req.body.encryptedPaymentId,
+      bank_ref_num: req.body.bank_ref_num,
+      bankcode: req.body.bankcode,
+      error: req.body.error,
+      error_Message: req.body.error_Message,
+      name_on_card: req.body.name_on_card,
+      cardnum: req.body.cardnum,
+      amount_split: req.body.amount_split,
+      payuMoneyId: req.body.payuMoneyId,
+      discount: req.body.discount,
+      net_amount_debit: req.body.net_amount_debit,
     });
 
     await payment.save();
 
+    let membershipExpiresOn = mentee.membershipExpiresOn;
+
+    let today = new Date();
+    today = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+    );
+
+    let validity = parseInt(data.udf3);
+
+    if (
+      !membershipExpiresOn ||
+      membershipExpiresOn.getTime() <= today.getTime()
+    ) {
+      membershipExpiresOn = new Date(
+        Date.UTC(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate() + validity
+        )
+      );
+    } else {
+      membershipExpiresOn = new Date(membershipExpiresOn);
+      membershipExpiresOn = new Date(
+        Date.UTC(
+          membershipExpiresOn.getFullYear(),
+          membershipExpiresOn.getMonth(),
+          membershipExpiresOn.getDate() + validity
+        )
+      );
+    }
+
+    console.log(membershipExpiresOn);
+
     await Mentee.findByIdAndUpdate(menteeID, {
+      membershipExpiresOn: membershipExpiresOn,
       $push: {
         payments: payment._id,
       },
@@ -174,12 +266,8 @@ exports.successCallback = async (req, res, next) => {
 
     res.status(200).json({
       type: "success",
-      data: {
-        txnid: data.txnid,
-        name: data.firstname,
-        amount: data.amount,
-        plan: data.productinfo,
-      },
+      message: "Transaction Successful",
+      body: req.body,
     });
   } catch (error) {
     res.status(500).json({
@@ -187,11 +275,4 @@ exports.successCallback = async (req, res, next) => {
       message: error.message,
     });
   }
-};
-
-exports.failureCallback = async (req, res, next) => {
-  res.status(200).json({
-    type: "failure",
-    message: "Transaction Failure",
-  });
 };

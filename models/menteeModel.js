@@ -80,7 +80,7 @@ var MenteeSchema = mongoose.Schema({
         type: String,
         default: 'none'
     },
-    validity: Number,
+    membershipExpiresOn: Date,
     notifications: [Notifications],
     requests: [String],
     tickets: [String],
