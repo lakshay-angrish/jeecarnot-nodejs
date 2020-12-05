@@ -1,0 +1,16 @@
+{
+  "plans": [
+    {
+      "id": 1,
+      "name": "Plan 1",
+      "amount": 199.00,
+      "validity": 30
+    },
+    {
+      "id": 2,
+      "name": "Plan 2",
+      "amount": 299.00,
+      "validity": 45
+    }
+  ]
+}
