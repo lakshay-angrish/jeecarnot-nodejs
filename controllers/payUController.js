@@ -225,7 +225,7 @@ exports.webhook = async (req, res, next) => {
     recipients = [...mentee.mobileTokens];
     if (mentee.webToken) recipients.push(mentee.webToken);
 
-    await sendNotifications(
+    sendNotifications(
       {
         title: "Payment Successful",
         body: "Amount of: Rs." + data.amount + " paid for: " + data.productinfo,
